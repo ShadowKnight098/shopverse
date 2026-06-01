@@ -1,263 +1,181 @@
-import { useState, useEffect, useCallback } from 'react'
-import { CheckCircle2, XCircle, Store, Clock, Users, Eye } from 'lucide-react'
-import toast from 'react-hot-toast'
-import { supabase } from '../../lib/supabase.js'
-import { formatDate } from '../../utils/formatters.js'
-import Modal from '../../components/common/Modal'
+import { ShoppingBag } from 'lucide-react';
+import ProductCard from './ProductCard';
 
-const TABS = ['All', 'Pending', 'Approved', 'Rejected']
-
-const STATUS_STYLE = {
-  approved: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400',
-  pending:  'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400',
-  rejected: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400',
-}
-
-function getDealerStatus(profile) {
-  if (profile.role !== 'dealer') return 'rejected'
-  return profile.is_approved ? 'approved' : 'pending'
-}
-
-export default function AdminDealers() {
-  const [dealers, setDealers] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState('All')
-  const [updating, setUpdating] = useState(null)
-  const [viewDealer, setViewDealer] = useState(null)
-
-  useEffect(() => { document.title = 'Dealer Management — ShopVerse Admin' }, [])
-
-  const fetchDealers = useCallback(async () => {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .or('role.eq.dealer,role.eq.customer')
-      .not('shop_name', 'is', null)
-      .order('created_at', { ascending: false })
-    if (error) { toast.error('Failed to load dealers'); setLoading(false); return }
-    setDealers(data || [])
-    setLoading(false)
-  }, [])
-
-  useEffect(() => { fetchDealers() }, [fetchDealers])
-
-  const filtered = dealers.filter((d) => {
-    const status = getDealerStatus(d)
-    if (tab === 'All') return true
-    return status === tab.toLowerCase()
-  })
-
-  const approve = async (dealer) => {
-    setUpdating(dealer.id)
-    const { error } = await supabase
-      .from('profiles')
-      .update({ role: 'dealer', is_approved: true })
-      .eq('id', dealer.id)
-    if (error) { toast.error(error.message); setUpdating(null); return }
-    toast.success(`✅ ${dealer.shop_name} approved!`)
-    setUpdating(null)
-    fetchDealers()
+export default function ProductGrid({
+  products = [],
+  loading = false,
+  emptyMessage = 'No products found.',
+}) {
+  if (loading) {
+    return (
+      <>
+        <PgStyles />
+        <div className="pg-grid">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="pg-skel-card" style={{ animationDelay: `${i * 0.05}s` }}>
+              <div className="pg-skel pg-skel-img" />
+              <div className="pg-skel-body">
+                <div className="pg-skel pg-skel-title" />
+                <div className="pg-skel pg-skel-sub" />
+                <div className="pg-skel pg-skel-price" />
+                <div className="pg-skel pg-skel-btn" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </>
+    );
   }
 
-  const reject = async (dealer) => {
-    setUpdating(dealer.id)
-    const { error } = await supabase
-      .from('profiles')
-      .update({ role: 'customer', is_approved: false })
-      .eq('id', dealer.id)
-    if (error) { toast.error(error.message); setUpdating(null); return }
-    toast.success(`Dealer account revoked for ${dealer.shop_name}`)
-    setUpdating(null)
-    fetchDealers()
+  if (!products || products.length === 0) {
+    return (
+      <>
+        <PgStyles />
+        <div className="pg-empty">
+          <div className="pg-empty-icon-wrap">
+            <ShoppingBag size={34} className="pg-empty-icon" />
+          </div>
+          <h3 className="pg-empty-title">Nothing here yet</h3>
+          <p className="pg-empty-sub">{emptyMessage}</p>
+        </div>
+      </>
+    );
   }
-
-  const pendingCount = dealers.filter((d) => getDealerStatus(d) === 'pending').length
-  const approvedCount = dealers.filter((d) => getDealerStatus(d) === 'approved').length
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Dealer Management</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Approve or reject dealer applications</p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        {[
-          { label: 'Total Applications', value: dealers.length, icon: Users, color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-900/20' },
-          { label: 'Pending Review', value: pendingCount, icon: Clock, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' },
-          { label: 'Active Dealers', value: approvedCount, icon: Store, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20' },
-        ].map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-100 dark:border-slate-700 shadow-sm">
-            <div className={`w-11 h-11 rounded-xl ${bg} flex items-center justify-center mb-4`}>
-              <Icon size={22} className={color} />
-            </div>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">{loading ? '—' : value}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-2 flex-wrap">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer ${
-              tab === t
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/25'
-                : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700'
-            }`}
+    <>
+      <PgStyles />
+      <div className="pg-grid">
+        {products.map((product, i) => (
+          <div
+            key={product.id}
+            className="pg-card-wrap"
+            style={{ animationDelay: `${i * 0.04}s` }}
           >
-            {t}
-            {t === 'Pending' && pendingCount > 0 && (
-              <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-white/25 rounded-full">
-                {pendingCount}
-              </span>
-            )}
-          </button>
+            <ProductCard product={product} />
+          </div>
         ))}
       </div>
+    </>
+  );
+}
 
-      {/* Table */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="p-6 space-y-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="flex items-center gap-4">
-                <div className="skeleton h-11 w-11 rounded-xl" />
-                <div className="skeleton h-4 w-40 rounded" />
-                <div className="skeleton h-4 w-28 rounded ml-auto" />
-              </div>
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="px-6 py-16 text-center">
-            <Store className="mx-auto text-gray-300 dark:text-gray-600 mb-3" size={48} />
-            <p className="text-gray-500 dark:text-gray-400 font-medium">No {tab !== 'All' ? tab.toLowerCase() : ''} dealer applications found.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-100 dark:border-slate-700">
-                  {['Shop', 'Owner', 'Phone', 'Applied On', 'Status', 'Actions'].map((h) => (
-                    <th key={h} className="text-left px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-slate-700/50">
-                {filtered.map((d) => {
-                  const status = getDealerStatus(d)
-                  return (
-                    <tr key={d.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
-                            {d.shop_name?.charAt(0)?.toUpperCase() || 'S'}
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-gray-900 dark:text-white">{d.shop_name}</p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 max-w-[150px] truncate">{d.shop_description || 'No description'}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{d.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[160px]">{d.email}</p>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{d.phone || '—'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{formatDate(d.created_at)}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${STATUS_STYLE[status]}`}>
-                          {status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => setViewDealer(d)}
-                            className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors cursor-pointer"
-                            title="View Details"
-                          >
-                            <Eye size={15} />
-                          </button>
-                          {status !== 'approved' && (
-                            <button
-                              onClick={() => approve(d)}
-                              disabled={updating === d.id}
-                              className="p-2 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors cursor-pointer disabled:opacity-50"
-                              title="Approve"
-                            >
-                              <CheckCircle2 size={15} />
-                            </button>
-                          )}
-                          {status !== 'rejected' && (
-                            <button
-                              onClick={() => reject(d)}
-                              disabled={updating === d.id}
-                              className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors cursor-pointer disabled:opacity-50"
-                              title="Revoke"
-                            >
-                              <XCircle size={15} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+function PgStyles() {
+  return (
+    <style>{`
+      /* ── Grid ── */
+      .pg-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+      }
+      @media (min-width: 768px)  { .pg-grid { grid-template-columns: repeat(3, 1fr); gap: 18px; } }
+      @media (min-width: 1024px) { .pg-grid { grid-template-columns: repeat(4, 1fr); gap: 22px; } }
 
-      {/* View Details Modal */}
-      <Modal isOpen={!!viewDealer} onClose={() => setViewDealer(null)} title="Dealer Details" size="md">
-        {viewDealer && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-violet-50 to-fuchsia-50 dark:from-violet-900/20 dark:to-fuchsia-900/20 rounded-xl">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-white font-black text-xl">
-                {viewDealer.shop_name?.charAt(0)?.toUpperCase()}
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{viewDealer.shop_name}</h3>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${STATUS_STYLE[getDealerStatus(viewDealer)]}`}>
-                  {getDealerStatus(viewDealer)}
-                </span>
-              </div>
-            </div>
-            {[
-              { label: 'Owner Name', value: viewDealer.name },
-              { label: 'Email', value: viewDealer.email },
-              { label: 'Phone', value: viewDealer.phone || '—' },
-              { label: 'Description', value: viewDealer.shop_description || '—' },
-              { label: 'Applied On', value: formatDate(viewDealer.created_at) },
-            ].map(({ label, value }) => (
-              <div key={label} className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-slate-700 last:border-0">
-                <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">{label}</span>
-                <span className="text-sm text-gray-900 dark:text-white text-right max-w-[60%]">{value}</span>
-              </div>
-            ))}
-            <div className="flex gap-3 pt-2">
-              {getDealerStatus(viewDealer) !== 'approved' && (
-                <button onClick={() => { approve(viewDealer); setViewDealer(null) }} className="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer">
-                  <CheckCircle2 size={16} /> Approve
-                </button>
-              )}
-              {getDealerStatus(viewDealer) !== 'rejected' && (
-                <button onClick={() => { reject(viewDealer); setViewDealer(null) }} className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer">
-                  <XCircle size={16} /> Revoke
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-      </Modal>
-    </div>
-  )
+      /* card entrance */
+      .pg-card-wrap {
+        animation: pgFadeUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+
+      /* ── Skeleton card ── */
+      .pg-skel-card {
+        border-radius: 16px;
+        overflow: hidden;
+        background: rgba(0,0,0,0.03);
+        border: 1px solid rgba(0,0,0,0.05);
+        animation: pgFadeUp 0.4s ease both;
+      }
+      @media (prefers-color-scheme: dark) {
+        .pg-skel-card {
+          background: rgba(255,255,255,0.03);
+          border-color: rgba(255,255,255,0.05);
+        }
+      }
+
+      .pg-skel {
+        border-radius: 8px;
+        background: linear-gradient(
+          90deg,
+          rgba(0,0,0,0.06) 25%,
+          rgba(0,0,0,0.02) 50%,
+          rgba(0,0,0,0.06) 75%
+        );
+        background-size: 200% 100%;
+        animation: pgShimmer 1.5s ease infinite;
+      }
+      @media (prefers-color-scheme: dark) {
+        .pg-skel {
+          background: linear-gradient(
+            90deg,
+            rgba(255,255,255,0.07) 25%,
+            rgba(255,255,255,0.02) 50%,
+            rgba(255,255,255,0.07) 75%
+          );
+          background-size: 200% 100%;
+        }
+      }
+
+      .pg-skel-img   { width: 100%; aspect-ratio: 1; border-radius: 0; }
+      .pg-skel-body  { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+      .pg-skel-title { height: 13px; width: 80%; }
+      .pg-skel-sub   { height: 11px; width: 55%; }
+      .pg-skel-price { height: 17px; width: 38%; border-radius: 6px; }
+      .pg-skel-btn   { height: 34px; width: 100%; border-radius: 10px; margin-top: 4px; }
+
+      /* ── Empty state ── */
+      .pg-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 80px 24px;
+        text-align: center;
+        animation: pgFadeUp 0.5s ease both;
+      }
+      .pg-empty-icon-wrap {
+        width: 72px; height: 72px;
+        border-radius: 20px;
+        background: rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.06);
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 18px;
+      }
+      @media (prefers-color-scheme: dark) {
+        .pg-empty-icon-wrap {
+          background: rgba(255,255,255,0.05);
+          border-color: rgba(255,255,255,0.07);
+        }
+      }
+      .pg-empty-icon { color: #9ca3af; }
+      @media (prefers-color-scheme: dark) { .pg-empty-icon { color: #4b5563; } }
+
+      .pg-empty-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #374151;
+        margin: 0 0 8px;
+        letter-spacing: -0.015em;
+      }
+      @media (prefers-color-scheme: dark) { .pg-empty-title { color: rgba(255,255,255,0.7); } }
+
+      .pg-empty-sub {
+        font-size: 13px;
+        color: #9ca3af;
+        margin: 0;
+        max-width: 300px;
+        line-height: 1.65;
+      }
+      @media (prefers-color-scheme: dark) { .pg-empty-sub { color: #6b7280; } }
+
+      /* ── Keyframes ── */
+      @keyframes pgFadeUp {
+        from { opacity: 0; transform: translateY(14px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes pgShimmer {
+        0%   { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+    `}</style>
+  );
 }

@@ -1,77 +1,50 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Package,
-  ShoppingBag,
-  DollarSign,
-  Clock,
-  Eye,
-  TrendingUp,
-  ArrowUpRight,
+  Package, ShoppingBag, DollarSign, Clock,
+  Eye, TrendingUp, ArrowUpRight,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase.js'
-import Badge from '../../components/common/Badge'
-import Button from '../../components/common/Button'
 import { formatPrice, formatDate } from '../../utils/formatters.js'
-import { ORDER_STATUSES } from '../../lib/constants.js'
 
-const STATUS_BADGE_MAP = {
-  'Pending Payment': 'warning',
-  Processing: 'info',
-  Shipped: 'default',
-  Delivered: 'success',
-  Cancelled: 'danger',
+const STATUS_STYLES = {
+  'Pending Payment': { bg: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: 'rgba(245,158,11,0.25)' },
+  'Processing':      { bg: 'rgba(99,102,241,0.12)',  color: '#818cf8', border: 'rgba(99,102,241,0.25)' },
+  'Shipped':         { bg: 'rgba(14,165,233,0.12)',  color: '#38bdf8', border: 'rgba(14,165,233,0.25)' },
+  'Delivered':       { bg: 'rgba(16,185,129,0.12)',  color: '#34d399', border: 'rgba(16,185,129,0.25)' },
+  'Cancelled':       { bg: 'rgba(239,68,68,0.12)',   color: '#f87171', border: 'rgba(239,68,68,0.25)'  },
 }
+
+const STAT_CARDS = (stats) => [
+  { label: 'Total Products', value: stats.totalProducts, icon: Package,     accent: '#6366f1', glow: 'rgba(99,102,241,0.2)'  },
+  { label: 'Total Orders',   value: stats.totalOrders,   icon: ShoppingBag, accent: '#10b981', glow: 'rgba(16,185,129,0.2)'  },
+  { label: 'Revenue',        value: formatPrice(stats.revenue), icon: DollarSign, accent: '#f59e0b', glow: 'rgba(245,158,11,0.2)', isPrice: true },
+  { label: 'Pending Orders', value: stats.pendingOrders, icon: Clock,       accent: '#ef4444', glow: 'rgba(239,68,68,0.2)'   },
+]
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
-  const [stats, setStats] = useState({
-    totalProducts: 0,
-    totalOrders: 0,
-    revenue: 0,
-    pendingOrders: 0,
-  })
+  const [stats, setStats] = useState({ totalProducts: 0, totalOrders: 0, revenue: 0, pendingOrders: 0 })
   const [recentOrders, setRecentOrders] = useState([])
   const [loading, setLoading] = useState(true)
 
   async function fetchDashboardData() {
     setLoading(true)
     try {
-      const [productsRes, ordersRes, revenueRes, pendingRes, recentRes] =
-        await Promise.all([
-          supabase
-            .from('products')
-            .select('*', { count: 'exact', head: true }),
-          supabase
-            .from('orders')
-            .select('*', { count: 'exact', head: true }),
-          supabase
-            .from('orders')
-            .select('total_amount')
-            .neq('status', 'Cancelled'),
-          supabase
-            .from('orders')
-            .select('*', { count: 'exact', head: true })
-            .eq('status', 'Pending Payment'),
-          supabase
-            .from('orders')
-            .select('*, profiles(name, email)')
-            .order('created_at', { ascending: false })
-            .limit(10),
-        ])
-
-      const revenue = (revenueRes.data || []).reduce(
-        (sum, o) => sum + (o.total_amount || 0),
-        0
-      )
-
+      const [productsRes, ordersRes, revenueRes, pendingRes, recentRes] = await Promise.all([
+        supabase.from('products').select('*', { count: 'exact', head: true }),
+        supabase.from('orders').select('*', { count: 'exact', head: true }),
+        supabase.from('orders').select('total_amount').neq('status', 'Cancelled'),
+        supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'Pending Payment'),
+        supabase.from('orders').select('*, profiles(name, email)').order('created_at', { ascending: false }).limit(10),
+      ])
+      const revenue = (revenueRes.data || []).reduce((sum, o) => sum + (o.total_amount || 0), 0)
       setStats({
         totalProducts: productsRes.count || 0,
-        totalOrders: ordersRes.count || 0,
+        totalOrders:   ordersRes.count   || 0,
         revenue,
-        pendingOrders: pendingRes.count || 0,
+        pendingOrders: pendingRes.count  || 0,
       })
-
       setRecentOrders(recentRes.data || [])
     } catch (err) {
       console.error('Dashboard fetch error:', err)
@@ -80,236 +53,463 @@ export default function AdminDashboard() {
     }
   }
 
-  useEffect(() => {
-    fetchDashboardData()
-  }, [])
+  useEffect(() => { fetchDashboardData() }, [])
 
-  const statCards = [
-    {
-      label: 'Total Products',
-      value: stats.totalProducts,
-      icon: Package,
-      gradient: 'from-indigo-500 to-indigo-600',
-      bgLight: 'bg-indigo-50 dark:bg-indigo-900/20',
-      iconBg: 'bg-indigo-100 dark:bg-indigo-800/40',
-      iconColor: 'text-indigo-600 dark:text-indigo-400',
-    },
-    {
-      label: 'Total Orders',
-      value: stats.totalOrders,
-      icon: ShoppingBag,
-      gradient: 'from-emerald-500 to-emerald-600',
-      bgLight: 'bg-emerald-50 dark:bg-emerald-900/20',
-      iconBg: 'bg-emerald-100 dark:bg-emerald-800/40',
-      iconColor: 'text-emerald-600 dark:text-emerald-400',
-    },
-    {
-      label: 'Revenue',
-      value: formatPrice(stats.revenue),
-      icon: DollarSign,
-      gradient: 'from-amber-500 to-amber-600',
-      bgLight: 'bg-amber-50 dark:bg-amber-900/20',
-      iconBg: 'bg-amber-100 dark:bg-amber-800/40',
-      iconColor: 'text-amber-600 dark:text-amber-400',
-      isPrice: true,
-    },
-    {
-      label: 'Pending Orders',
-      value: stats.pendingOrders,
-      icon: Clock,
-      gradient: 'from-rose-500 to-rose-600',
-      bgLight: 'bg-rose-50 dark:bg-rose-900/20',
-      iconBg: 'bg-rose-100 dark:bg-rose-800/40',
-      iconColor: 'text-rose-600 dark:text-rose-400',
-    },
-  ]
+  if (loading) return <LoadingSkeleton />
 
-  if (loading) {
-    return (
-      <div className="space-y-8">
-        {/* Title skeleton */}
-        <div className="space-y-2">
-          <div className="skeleton h-8 w-48 rounded-lg" />
-          <div className="skeleton h-5 w-72 rounded-lg" />
+  const cards = STAT_CARDS(stats)
+
+  return (
+    <>
+      <AdStyles />
+      <div className="ad-root">
+
+        {/* ── Header ── */}
+        <div className="ad-header">
+          <div>
+            <p className="ad-eyebrow">Overview</p>
+            <h1 className="ad-title">Dashboard</h1>
+            <p className="ad-subtitle">Welcome back! Here's what's happening in your store.</p>
+          </div>
+          <button className="ad-refresh-btn" onClick={fetchDashboardData} title="Refresh">
+            <TrendingUp size={15} />
+            Refresh
+          </button>
         </div>
 
-        {/* Stat cards skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700/50"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="skeleton h-12 w-12 rounded-xl" />
-                <div className="skeleton h-4 w-16 rounded" />
+        {/* ── Stat cards ── */}
+        <div className="ad-stats-grid">
+          {cards.map((card, i) => {
+            const Icon = card.icon
+            return (
+              <div
+                key={card.label}
+                className="ad-stat-card"
+                style={{ animationDelay: `${i * 0.07}s`, '--card-accent': card.accent, '--card-glow': card.glow }}
+              >
+                <div className="ad-stat-icon-wrap">
+                  <Icon size={22} color={card.accent} />
+                </div>
+                <p className="ad-stat-value">
+                  {card.isPrice ? card.value : card.value.toLocaleString()}
+                </p>
+                <p className="ad-stat-label">{card.label}</p>
+                <div className="ad-stat-bar" />
               </div>
-              <div className="skeleton h-8 w-24 rounded mb-2" />
-              <div className="skeleton h-4 w-32 rounded" />
+            )
+          })}
+        </div>
+
+        {/* ── Recent orders ── */}
+        <div className="ad-card">
+          <div className="ad-card-header">
+            <h2 className="ad-card-title">Recent Orders</h2>
+            <button className="ad-view-all-btn" onClick={() => navigate('/admin/orders')}>
+              View All
+              <ArrowUpRight size={14} />
+            </button>
+          </div>
+
+          {recentOrders.length === 0 ? (
+            <div className="ad-empty">
+              <div className="ad-empty-icon-wrap">
+                <ShoppingBag size={30} color="rgba(255,255,255,0.2)" />
+              </div>
+              <p className="ad-empty-title">No orders yet</p>
+              <p className="ad-empty-sub">Orders will appear here once customers start purchasing.</p>
+            </div>
+          ) : (
+            <div className="ad-table-wrap">
+              <table className="ad-table">
+                <thead>
+                  <tr className="ad-thead-row">
+                    {['Order ID', 'Customer', 'Date', 'Amount', 'Status', ''].map((h) => (
+                      <th key={h} className="ad-th">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentOrders.map((order, i) => {
+                    const s = STATUS_STYLES[order.status] || STATUS_STYLES['Processing']
+                    return (
+                      <tr
+                        key={order.id}
+                        className="ad-tr"
+                        style={{ animationDelay: `${0.25 + i * 0.04}s` }}
+                      >
+                        <td className="ad-td">
+                          <span className="ad-order-id">#{order.id?.slice(0, 8)}</span>
+                        </td>
+                        <td className="ad-td">
+                          <span className="ad-customer">
+                            {order.profiles?.name || order.profiles?.email || 'N/A'}
+                          </span>
+                        </td>
+                        <td className="ad-td">
+                          <span className="ad-date">{formatDate(order.created_at)}</span>
+                        </td>
+                        <td className="ad-td">
+                          <span className="ad-amount">{formatPrice(order.total_amount)}</span>
+                        </td>
+                        <td className="ad-td">
+                          <span
+                            className="ad-status-pill"
+                            style={{ background: s.bg, color: s.color, borderColor: s.border }}
+                          >
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className="ad-td ad-td-right">
+                          <button
+                            className="ad-eye-btn"
+                            onClick={() => navigate('/admin/orders')}
+                            title="View order"
+                          >
+                            <Eye size={15} />
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+      </div>
+    </>
+  )
+}
+
+/* ── Loading skeleton ── */
+function LoadingSkeleton() {
+  return (
+    <>
+      <AdStyles />
+      <div className="ad-root">
+        <div className="ad-header">
+          <div>
+            <div className="ad-skel" style={{ height: 10, width: 60, marginBottom: 10 }} />
+            <div className="ad-skel" style={{ height: 28, width: 160, marginBottom: 8 }} />
+            <div className="ad-skel" style={{ height: 13, width: 260 }} />
+          </div>
+        </div>
+        <div className="ad-stats-grid">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="ad-stat-card" style={{ animationDelay: `${i * 0.06}s` }}>
+              <div className="ad-skel" style={{ width: 44, height: 44, borderRadius: 12, marginBottom: 16 }} />
+              <div className="ad-skel" style={{ height: 28, width: '60%', marginBottom: 8 }} />
+              <div className="ad-skel" style={{ height: 12, width: '80%' }} />
             </div>
           ))}
         </div>
-
-        {/* Table skeleton */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-gray-700/50 p-6">
-          <div className="skeleton h-6 w-40 rounded mb-6" />
-          <div className="space-y-4">
+        <div className="ad-card">
+          <div className="ad-card-header">
+            <div className="ad-skel" style={{ height: 16, width: 140 }} />
+          </div>
+          <div style={{ padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex gap-4">
-                <div className="skeleton h-4 w-24 rounded" />
-                <div className="skeleton h-4 w-32 rounded" />
-                <div className="skeleton h-4 w-28 rounded" />
-                <div className="skeleton h-4 w-20 rounded" />
-                <div className="skeleton h-4 w-20 rounded" />
+              <div key={i} style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                <div className="ad-skel" style={{ height: 12, width: 80 }} />
+                <div className="ad-skel" style={{ height: 12, width: 120 }} />
+                <div className="ad-skel" style={{ height: 12, width: 90 }} />
+                <div className="ad-skel" style={{ height: 12, width: 70 }} />
+                <div className="ad-skel" style={{ height: 22, width: 90, borderRadius: 20 }} />
               </div>
             ))}
           </div>
         </div>
       </div>
-    )
-  }
+    </>
+  )
+}
 
+function AdStyles() {
   return (
-    <div className="space-y-8">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
-          Dashboard
-        </h1>
-        <p className="mt-1 text-gray-500 dark:text-gray-400">
-          Welcome back! Here's an overview of your store.
-        </p>
-      </div>
+    <style>{`
+      /* ── Root ── */
+      .ad-root {
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+        animation: adFadeUp 0.5s cubic-bezier(0.22,1,0.36,1) both;
+      }
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statCards.map((card) => {
-          const Icon = card.icon
-          return (
-            <div
-              key={card.label}
-              className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-shadow duration-200"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center ${card.iconBg}`}
-                >
-                  <Icon className={card.iconColor} size={24} />
-                </div>
-                <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                  <TrendingUp size={14} />
-                </div>
-              </div>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                {card.isPrice ? card.value : card.value.toLocaleString()}
-              </p>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {card.label}
-              </p>
-            </div>
-          )
-        })}
-      </div>
+      /* ── Header ── */
+      .ad-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      .ad-eyebrow {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: #6366f1;
+        margin: 0 0 6px;
+      }
+      .ad-title {
+        font-size: clamp(22px, 3vw, 28px);
+        font-weight: 800;
+        color: rgba(255,255,255,0.92);
+        margin: 0 0 5px;
+        letter-spacing: -0.03em;
+      }
+      .ad-subtitle {
+        font-size: 13px;
+        color: rgba(255,255,255,0.35);
+        margin: 0;
+      }
+      .ad-refresh-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 9px 18px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(255,255,255,0.04);
+        color: rgba(255,255,255,0.55);
+        font-size: 12px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s, border-color 0.15s;
+        white-space: nowrap;
+      }
+      .ad-refresh-btn:hover {
+        background: rgba(255,255,255,0.08);
+        color: rgba(255,255,255,0.85);
+        border-color: rgba(255,255,255,0.14);
+      }
 
-      {/* Recent orders */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-sm">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700/50">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Recent Orders
-          </h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/admin/orders')}
-          >
-            View All
-            <ArrowUpRight size={16} />
-          </Button>
-        </div>
+      /* ── Stat cards ── */
+      .ad-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+      }
+      @media (min-width: 1024px) { .ad-stats-grid { grid-template-columns: repeat(4, 1fr); gap: 18px; } }
 
-        {recentOrders.length === 0 ? (
-          <div className="px-6 py-16 text-center">
-            <ShoppingBag
-              className="mx-auto text-gray-300 dark:text-gray-600 mb-3"
-              size={48}
-            />
-            <p className="text-gray-500 dark:text-gray-400 font-medium">
-              No orders yet
-            </p>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-              Orders will appear here once customers start purchasing.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-100 dark:border-gray-700/50">
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Order ID
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Customer
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Amount
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="text-right px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
-                {recentOrders.map((order, idx) => (
-                  <tr
-                    key={order.id}
-                    className={`hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors ${
-                      idx % 2 === 0
-                        ? 'bg-white dark:bg-slate-800'
-                        : 'bg-gray-50/50 dark:bg-slate-800/50'
-                    }`}
-                  >
-                    <td className="px-6 py-4 text-sm font-mono text-gray-700 dark:text-gray-300">
-                      #{order.id?.slice(0, 8)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-                      {order.profiles?.name || order.profiles?.email || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                      {formatDate(order.created_at)}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">
-                      {formatPrice(order.total_amount)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <Badge
-                        variant={STATUS_BADGE_MAP[order.status] || 'default'}
-                      >
-                        {order.status}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => navigate('/admin/orders')}
-                        className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:text-indigo-400 dark:hover:bg-indigo-900/20 transition-colors cursor-pointer"
-                        title="View order"
-                      >
-                        <Eye size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
+      .ad-stat-card {
+        position: relative;
+        background: #16141a;
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 18px;
+        padding: 22px 20px 20px;
+        overflow: hidden;
+        cursor: default;
+        animation: adFadeUp 0.45s cubic-bezier(0.22,1,0.36,1) both;
+        transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+      }
+      .ad-stat-card:hover {
+        border-color: var(--card-accent, #6366f1);
+        transform: translateY(-3px);
+        box-shadow: 0 12px 32px var(--card-glow, rgba(99,102,241,0.15));
+      }
+      .ad-stat-icon-wrap {
+        width: 44px; height: 44px;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.07);
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 18px;
+      }
+      .ad-stat-value {
+        font-size: clamp(22px, 3vw, 28px);
+        font-weight: 800;
+        color: rgba(255,255,255,0.92);
+        margin: 0 0 5px;
+        letter-spacing: -0.03em;
+      }
+      .ad-stat-label {
+        font-size: 12px;
+        color: rgba(255,255,255,0.35);
+        margin: 0;
+        font-weight: 500;
+      }
+      .ad-stat-bar {
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, var(--card-accent, #6366f1), transparent);
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+      .ad-stat-card:hover .ad-stat-bar { opacity: 1; }
+
+      /* ── Card ── */
+      .ad-card {
+        background: #16141a;
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 20px;
+        overflow: hidden;
+        animation: adFadeUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.15s both;
+      }
+      .ad-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 24px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+      }
+      .ad-card-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: rgba(255,255,255,0.85);
+        margin: 0;
+        letter-spacing: -0.015em;
+      }
+      .ad-view-all-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #6366f1;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
+        padding: 6px 10px;
+        border-radius: 8px;
+        transition: background 0.15s;
+      }
+      .ad-view-all-btn:hover { background: rgba(99,102,241,0.1); }
+
+      /* ── Empty ── */
+      .ad-empty {
+        padding: 60px 24px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .ad-empty-icon-wrap {
+        width: 64px; height: 64px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.07);
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 16px;
+      }
+      .ad-empty-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: rgba(255,255,255,0.5);
+        margin: 0 0 6px;
+      }
+      .ad-empty-sub {
+        font-size: 12px;
+        color: rgba(255,255,255,0.25);
+        margin: 0;
+        max-width: 280px;
+        line-height: 1.65;
+      }
+
+      /* ── Table ── */
+      .ad-table-wrap { overflow-x: auto; }
+      .ad-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .ad-thead-row {
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+      }
+      .ad-th {
+        text-align: left;
+        padding: 11px 20px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.25);
+        white-space: nowrap;
+      }
+      .ad-tr {
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+        transition: background 0.15s;
+        animation: adFadeUp 0.4s ease both;
+      }
+      .ad-tr:last-child { border-bottom: none; }
+      .ad-tr:hover { background: rgba(255,255,255,0.03); }
+      .ad-td {
+        padding: 13px 20px;
+        vertical-align: middle;
+      }
+      .ad-td-right { text-align: right; }
+
+      .ad-order-id {
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        font-size: 12px;
+        color: rgba(255,255,255,0.55);
+        letter-spacing: 0.03em;
+      }
+      .ad-customer {
+        font-size: 13px;
+        font-weight: 500;
+        color: rgba(255,255,255,0.75);
+      }
+      .ad-date {
+        font-size: 12px;
+        color: rgba(255,255,255,0.35);
+        white-space: nowrap;
+      }
+      .ad-amount {
+        font-size: 13px;
+        font-weight: 700;
+        color: rgba(255,255,255,0.88);
+      }
+      .ad-status-pill {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 9999px;
+        font-size: 11px;
+        font-weight: 600;
+        border: 1px solid transparent;
+        white-space: nowrap;
+      }
+      .ad-eye-btn {
+        width: 30px; height: 30px;
+        border-radius: 8px;
+        border: none;
+        background: transparent;
+        color: rgba(255,255,255,0.3);
+        display: inline-flex; align-items: center; justify-content: center;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+      }
+      .ad-eye-btn:hover {
+        background: rgba(99,102,241,0.12);
+        color: #818cf8;
+      }
+
+      /* ── Skeleton ── */
+      .ad-skel {
+        border-radius: 8px;
+        background: linear-gradient(
+          90deg,
+          rgba(255,255,255,0.06) 25%,
+          rgba(255,255,255,0.02) 50%,
+          rgba(255,255,255,0.06) 75%
+        );
+        background-size: 200% 100%;
+        animation: adShimmer 1.5s ease infinite;
+        display: block;
+      }
+
+      /* ── Keyframes ── */
+      @keyframes adFadeUp {
+        from { opacity: 0; transform: translateY(14px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes adShimmer {
+        0%   { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+    `}</style>
   )
 }

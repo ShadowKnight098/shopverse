@@ -1,97 +1,275 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom'
-import {
-  LayoutDashboard,
-  Package,
-  PlusCircle,
-  Store,
-  ArrowLeft,
-  LogOut,
-} from 'lucide-react'
+import { LayoutDashboard, Package, PlusCircle, Store, ArrowLeft, LogOut, X } from 'lucide-react'
 import useAuthStore from '../../stores/useAuthStore'
 
 const navItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, path: '/dealer' },
-  { label: 'My Products', icon: Package, path: '/dealer/products' },
-  { label: 'Add Product', icon: PlusCircle, path: '/dealer/products/new' },
+  { label: 'Dashboard',   icon: LayoutDashboard, path: '/dealer' },
+  { label: 'My Products', icon: Package,          path: '/dealer/products' },
+  { label: 'Add Product', icon: PlusCircle,       path: '/dealer/products/new' },
 ]
 
-export default function DealerSidebar() {
+export default function DealerSidebar({ isOpen, onClose }) {
   const navigate = useNavigate()
   const { logout, profile } = useAuthStore()
 
   const handleLogout = () => {
     logout()
     navigate('/')
+    if (onClose) onClose()
   }
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-64 bg-slate-900 text-white flex flex-col z-40">
-      {/* Logo */}
-      <div className="px-6 py-6 border-b border-slate-800">
-        <Link to="/dealer" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-white shadow-lg shadow-violet-500/25">
-            <Store size={18} />
-          </div>
-          <div>
-            <h1 className="text-sm font-bold leading-tight text-white">
-              {profile?.shop_name || 'My Store'}
-            </h1>
-            <p className="text-[10px] text-violet-400 uppercase tracking-widest font-semibold">
-              Dealer Portal
-            </p>
-          </div>
-        </Link>
-      </div>
+    <>
+      <style>{`
+        .ds-aside {
+          position: fixed;
+          left: 0; top: 0; bottom: 0;
+          width: 252px;
+          background: #0f0d12;
+          border-right: 1px solid rgba(255,255,255,0.06);
+          display: flex;
+          flex-direction: column;
+          z-index: 40;
+          transform: translateX(-100%);
+          transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+        }
+        .ds-aside.open { transform: translateX(0); }
+        @media (min-width: 1024px) { .ds-aside { transform: translateX(0); } }
 
-      {/* Dealer info badge */}
-      <div className="px-4 py-3 mx-3 mt-3 bg-violet-600/10 border border-violet-500/20 rounded-xl">
-        <p className="text-xs text-violet-300 font-medium truncate">
-          {profile?.name || 'Dealer'}
-        </p>
-        <div className="flex items-center gap-1.5 mt-0.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-          <span className="text-[10px] text-green-400 font-medium">Active Dealer</span>
-        </div>
-      </div>
+        /* ── Close btn (mobile) ── */
+        .ds-close {
+          display: flex;
+          position: absolute;
+          right: 14px; top: 14px;
+          width: 30px; height: 30px;
+          border-radius: 8px;
+          border: 1px solid rgba(255,255,255,0.08);
+          background: transparent;
+          color: rgba(255,255,255,0.4);
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: background 0.15s, color 0.15s;
+        }
+        .ds-close:hover { background: rgba(255,255,255,0.08); color: white; }
+        @media (min-width: 1024px) { .ds-close { display: none; } }
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navItems.map(({ label, icon: Icon, path }) => (
-          <NavLink
-            key={path}
-            to={path}
-            end={path === '/dealer'}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                isActive
-                  ? 'bg-violet-600/20 text-violet-400 border-l-[3px] border-violet-400'
-                  : 'text-gray-400 hover:text-white hover:bg-slate-800 border-l-[3px] border-transparent'
-              }`
-            }
-          >
-            <Icon size={18} />
-            {label}
-          </NavLink>
-        ))}
-      </nav>
+        /* ── Logo ── */
+        .ds-logo-wrap {
+          padding: 22px 20px 20px;
+          border-bottom: 1px solid rgba(255,255,255,0.06);
+          flex-shrink: 0;
+        }
+        .ds-logo-link {
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          text-decoration: none;
+        }
+        .ds-logo-icon {
+          width: 38px; height: 38px;
+          border-radius: 12px;
+          background: linear-gradient(135deg, #7c3aed, #c026d3);
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0;
+          box-shadow: 0 4px 14px rgba(124,58,237,0.35);
+        }
+        .ds-logo-text {}
+        .ds-logo-name {
+          font-size: 13px;
+          font-weight: 800;
+          color: #fff;
+          margin: 0 0 1px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 128px;
+          display: block;
+          letter-spacing: -0.01em;
+        }
+        .ds-logo-tag {
+          font-size: 9px;
+          font-weight: 700;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: #a78bfa;
+        }
 
-      {/* Bottom actions */}
-      <div className="px-3 py-4 border-t border-slate-800 space-y-1">
-        <Link
-          to="/"
-          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-slate-800 transition-colors"
-        >
-          <ArrowLeft size={18} />
-          Back to Store
-        </Link>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium w-full text-red-400 hover:text-red-300 hover:bg-red-900/20 transition-colors cursor-pointer"
-        >
-          <LogOut size={18} />
-          Logout
+        /* ── Dealer badge ── */
+        .ds-badge {
+          margin: 12px 12px 0;
+          padding: 10px 14px;
+          background: rgba(124,58,237,0.08);
+          border: 1px solid rgba(124,58,237,0.18);
+          border-radius: 12px;
+          flex-shrink: 0;
+        }
+        .ds-badge-name {
+          font-size: 12px;
+          font-weight: 600;
+          color: #c4b5fd;
+          margin: 0 0 4px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .ds-badge-status {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .ds-badge-dot {
+          width: 6px; height: 6px;
+          border-radius: 50%;
+          background: #34d399;
+          flex-shrink: 0;
+          box-shadow: 0 0 6px rgba(52,211,153,0.6);
+        }
+        .ds-badge-label {
+          font-size: 10px;
+          font-weight: 600;
+          color: #34d399;
+          letter-spacing: 0.04em;
+        }
+
+        /* ── Nav ── */
+        .ds-nav {
+          flex: 1;
+          padding: 14px 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          overflow-y: auto;
+        }
+        .ds-nav::-webkit-scrollbar { width: 0; }
+
+        .ds-nav-item {
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          padding: 10px 14px;
+          border-radius: 11px;
+          font-size: 13px;
+          font-weight: 500;
+          color: rgba(255,255,255,0.45);
+          text-decoration: none;
+          border-left: 2.5px solid transparent;
+          transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
+          position: relative;
+        }
+        .ds-nav-item:hover {
+          background: rgba(255,255,255,0.05);
+          color: rgba(255,255,255,0.85);
+          transform: translateX(2px);
+        }
+        .ds-nav-item.active {
+          background: rgba(124,58,237,0.15);
+          color: #a78bfa;
+          border-left-color: #7c3aed;
+          font-weight: 700;
+        }
+        .ds-nav-item.active:hover { transform: none; }
+
+        /* ── Bottom actions ── */
+        .ds-bottom {
+          padding: 10px;
+          border-top: 1px solid rgba(255,255,255,0.06);
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          flex-shrink: 0;
+        }
+        .ds-bottom-link {
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          padding: 10px 14px;
+          border-radius: 11px;
+          font-size: 13px;
+          font-weight: 500;
+          color: rgba(255,255,255,0.4);
+          text-decoration: none;
+          transition: background 0.15s, color 0.15s;
+        }
+        .ds-bottom-link:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.8); }
+        .ds-logout {
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          padding: 10px 14px;
+          border-radius: 11px;
+          font-size: 13px;
+          font-weight: 500;
+          color: rgba(239,68,68,0.7);
+          background: transparent;
+          border: none;
+          font-family: inherit;
+          width: 100%;
+          cursor: pointer;
+          transition: background 0.15s, color 0.15s;
+          text-align: left;
+        }
+        .ds-logout:hover { background: rgba(239,68,68,0.1); color: #f87171; }
+      `}</style>
+
+      <aside className={`ds-aside ${isOpen ? 'open' : ''}`}>
+
+        {/* Close (mobile) */}
+        <button className="ds-close" onClick={onClose} aria-label="Close sidebar">
+          <X size={16} />
         </button>
-      </div>
-    </aside>
+
+        {/* Logo */}
+        <div className="ds-logo-wrap">
+          <Link to="/dealer" className="ds-logo-link" onClick={onClose}>
+            <div className="ds-logo-icon">
+              <Store size={18} color="white" />
+            </div>
+            <div className="ds-logo-text">
+              <span className="ds-logo-name">{profile?.shop_name || 'My Store'}</span>
+              <span className="ds-logo-tag">Dealer Portal</span>
+            </div>
+          </Link>
+        </div>
+
+        {/* Dealer badge */}
+        <div className="ds-badge">
+          <p className="ds-badge-name">{profile?.name || 'Dealer'}</p>
+          <div className="ds-badge-status">
+            <span className="ds-badge-dot" />
+            <span className="ds-badge-label">Active Dealer</span>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav className="ds-nav">
+          {navItems.map(({ label, icon: Icon, path }) => (
+            <NavLink
+              key={path}
+              to={path}
+              end={path === '/dealer'}
+              onClick={onClose}
+              className={({ isActive }) => `ds-nav-item${isActive ? ' active' : ''}`}
+            >
+              <Icon size={17} />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Bottom */}
+        <div className="ds-bottom">
+          <Link to="/" className="ds-bottom-link" onClick={onClose}>
+            <ArrowLeft size={17} />
+            Back to Store
+          </Link>
+          <button className="ds-logout" onClick={handleLogout}>
+            <LogOut size={17} />
+            Logout
+          </button>
+        </div>
+
+      </aside>
+    </>
   )
 }
