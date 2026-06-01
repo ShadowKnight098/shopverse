@@ -12,9 +12,9 @@ const BENEFITS = [
 ];
 
 export default function DealerRegisterPage() {
-  const [form, setForm]     = useState({ shop_name: '', shop_description: '', phone: '' });
+  const [form, setForm]       = useState({ shop_name: '', shop_description: '', phone: '' });
   const [loading, setLoading] = useState(false);
-  const [done, setDone]     = useState(false);
+  const [done, setDone]       = useState(false);
   const [mounted, setMounted] = useState(false);
   const { user, isDealer, isLoading, fetchProfile } = useAuthStore();
   const navigate = useNavigate();
@@ -38,10 +38,32 @@ export default function DealerRegisterPage() {
     e.preventDefault();
     if (!form.shop_name.trim()) { toast.error('Please enter your shop name.'); return; }
     setLoading(true);
-    const { error } = await supabase
+
+    // 1. Check for an existing request to prevent duplicates
+    const { data: existing, error: checkError } = await supabase
+      .from('dealer_requests')
+      .select('id, status')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (checkError) { toast.error(checkError.message); setLoading(false); return; }
+
+    if (existing) {
+      if (existing.status === 'pending') {
+        toast.error('You already have a pending application. Please wait for approval.');
+      } else if (existing.status === 'approved') {
+        toast.error('Your application was already approved.');
+      } else if (existing.status === 'rejected') {
+        toast.error('Your previous application was rejected. Please contact support.');
+      }
+      setLoading(false);
+      return;
+    }
+
+    // 2. Save shop info on profile (role stays as-is until admin approves)
+    const { error: profileError } = await supabase
       .from('profiles')
       .update({
-        role:             'dealer',
         shop_name:        form.shop_name.trim(),
         shop_description: form.shop_description.trim(),
         phone:            form.phone.trim(),
@@ -49,7 +71,21 @@ export default function DealerRegisterPage() {
       })
       .eq('id', user.id);
 
-    if (error) { toast.error(error.message); setLoading(false); return; }
+    if (profileError) { toast.error(profileError.message); setLoading(false); return; }
+
+    // 3. Insert into dealer_requests so admin can see and act on it
+    const { error: reqError } = await supabase
+      .from('dealer_requests')
+      .insert({
+        user_id:          user.id,
+        shop_name:        form.shop_name.trim(),
+        shop_description: form.shop_description.trim(),
+        phone:            form.phone.trim(),
+        status:           'pending',
+      });
+
+    if (reqError) { toast.error(reqError.message); setLoading(false); return; }
+
     await fetchProfile(user.id);
     setLoading(false);
     setDone(true);
@@ -200,7 +236,6 @@ export default function DealerRegisterPage() {
 
           </div>
         </div>
-
 
       </div>
     </>

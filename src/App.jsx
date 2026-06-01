@@ -32,6 +32,7 @@ const AdminProducts = React.lazy(() => import('./pages/admin/AdminProducts.jsx')
 const AdminOrders = React.lazy(() => import('./pages/admin/AdminOrders.jsx'))
 const AdminSales = React.lazy(() => import('./pages/admin/AdminSales.jsx'))
 const AdminMessages = React.lazy(() => import('./pages/admin/AdminMessages.jsx'))
+// const AdminDealers = React.lazy(() => import('./pages/admin/AdminDealers.jsx'))
 const AdminDealers = React.lazy(() => import('./pages/admin/AdminDealers.jsx'))
 
 const DealerRegisterPage = React.lazy(() => import('./pages/DealerRegisterPage.jsx'))
