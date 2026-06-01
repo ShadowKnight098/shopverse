@@ -44,6 +44,7 @@ const useCartStore = create(
                 id: product.id,
                 name: product.name,
                 price: product.price,
+                original_price: product.original_price,
                 image_url: product.image_url,
                 quantity: 1,
                 stock: product.stock || 99,

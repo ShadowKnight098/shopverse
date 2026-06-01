@@ -26,8 +26,9 @@ export default function CheckoutPage() {
     phone: '', address_line: '', city: '', state: '', pincode: '',
   });
 
-  const shippingCost = totalPrice > 500 ? 0 : 50;
+  const shippingCost = 0; // Free shipping
   const finalTotal   = totalPrice + shippingCost;
+  const savings      = items.reduce((sum, i) => sum + ((i.original_price || i.price) - i.price) * i.quantity, 0);
 
   useEffect(() => {
     document.title = 'Checkout — ShopVerse';
@@ -278,7 +279,14 @@ export default function CheckoutPage() {
                       </div>
                       <div className="chk-item-meta">
                         <p className="chk-item-name">{item.name}</p>
-                        <p className="chk-item-unit">{formatPrice(item.price)} each</p>
+                        <p className="chk-item-unit">
+                          {formatPrice(item.price)} each
+                          {item.original_price && item.original_price > item.price && (
+                            <span style={{ textDecoration: 'line-through', color: 'var(--chk-text3)', marginLeft: 6, fontSize: 11 }}>
+                              {formatPrice(item.original_price)}
+                            </span>
+                          )}
+                        </p>
                       </div>
                       <span className="chk-item-total">{formatPrice(item.price * item.quantity)}</span>
                     </div>
@@ -291,6 +299,12 @@ export default function CheckoutPage() {
                     <span>Subtotal</span>
                     <span>{formatPrice(totalPrice)}</span>
                   </div>
+                  {savings > 0 && (
+                    <div className="chk-total-row" style={{ color: 'var(--chk-green)', fontWeight: 600 }}>
+                      <span>You save</span>
+                      <span>−{formatPrice(savings)}</span>
+                    </div>
+                  )}
                   <div className="chk-total-row">
                     <span>Shipping</span>
                     <span className={shippingCost === 0 ? 'free' : ''}>
