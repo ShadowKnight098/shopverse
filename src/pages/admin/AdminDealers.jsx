@@ -5,7 +5,7 @@ import {
   TrendingUp, AlertCircle, Phone, FileText, Calendar,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { supabase } from '../../supabase.js';
+import { supabase } from '../../lib/supabase.js';
 
 export default function AdminDealersPage() {
   const [pendingRequests, setPendingRequests] = useState([]);
