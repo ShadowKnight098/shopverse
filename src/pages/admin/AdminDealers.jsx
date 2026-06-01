@@ -1,5 +1,6 @@
 import { ShoppingBag } from 'lucide-react';
-import ProductCard from './ProductCard';
+// import ProductCard from './ProductCard';
+import ProductCard from "../../components/product/ProductCard";
 
 export default function ProductGrid({
   products = [],
