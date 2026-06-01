@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { SlidersHorizontal, X, Search, Package } from 'lucide-react'
+import { SlidersHorizontal, X, Package, ChevronDown, Sparkles } from 'lucide-react'
 import { useProducts } from '../hooks/useProducts'
 import ProductFilters from '../components/product/ProductFilters'
 import ProductGrid from '../components/product/ProductGrid'
@@ -10,6 +10,7 @@ import { CATEGORIES } from '../lib/constants'
 export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [filtersOpen, setFiltersOpen]   = useState(false)
+  const [mounted, setMounted]           = useState(false)
 
   const category = searchParams.get('category') || ''
   const search   = searchParams.get('search')   || ''
@@ -25,7 +26,10 @@ export default function ProductsPage() {
     page, limit: 12,
   })
 
-  useEffect(() => { document.title = 'Shop Products — ShopVerse' }, [])
+  useEffect(() => {
+    document.title = 'Shop Products — ShopVerse'
+    requestAnimationFrame(() => setMounted(true))
+  }, [])
 
   const updateFilter = useCallback((key, value) => {
     setSearchParams((prev) => {
@@ -43,226 +47,60 @@ export default function ProductsPage() {
     ? `Results for "${search}"`
     : categoryLabel || 'All Products'
 
+  const activeFilterCount = [category, sort, minPrice, maxPrice].filter(Boolean).length
+
   return (
     <>
-      <style>{`
-        :root {
-          --pp-bg:        #ffffff;
-          --pp-surface:   #f9fafb;
-          --pp-border:    #e5e7eb;
-          --pp-text:      #111827;
-          --pp-text2:     #6b7280;
-          --pp-text3:     #9ca3af;
-          --pp-accent:    #4f46e5;
-          --pp-accent2:   #4338ca;
-          --pp-accentl:   rgba(79,70,229,0.13);
-        }
-        @media (prefers-color-scheme: dark) {
-          :root {
-            --pp-bg:      #0f172a;
-            --pp-surface: #1e293b;
-            --pp-border:  #334155;
-            --pp-text:    #f9fafb;
-            --pp-text2:   #94a3b8;
-            --pp-text3:   #64748b;
-            --pp-accentl: rgba(99,102,241,0.18);
-          }
-        }
+      <PPStyles />
+      <div className={`pp-root ${mounted ? 'pp-root--in' : ''}`}>
 
-        .pp-root { min-height: 100vh; background: var(--pp-bg); }
-
-        /* Hero */
-        .pp-hero {
-          position: relative; overflow: hidden;
-          padding: 56px 24px 52px;
-          background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #6d28d9 100%);
-        }
-        .pp-hero-blob {
-          position: absolute; border-radius: 50%;
-          pointer-events: none; filter: blur(48px);
-        }
-        .pp-hero-blob-tl {
-          top: -60px; left: -60px; width: 240px; height: 240px;
-          background: rgba(255,255,255,0.1);
-          animation: ppFloat 8s ease-in-out infinite;
-        }
-        .pp-hero-blob-br {
-          bottom: -80px; right: -60px; width: 320px; height: 320px;
-          background: rgba(236,72,153,0.18);
-          animation: ppFloat 10s ease-in-out infinite reverse;
-        }
-        .pp-hero-inner {
-          position: relative; z-index: 2;
-          max-width: 1200px; margin: 0 auto;
-          animation: ppSlideUp 0.7s cubic-bezier(0.22,1,0.36,1) both;
-        }
-        .pp-hero h1 {
-          font-size: 32px; font-weight: 800; color: white;
-          letter-spacing: -0.03em; margin: 0 0 8px;
-        }
-        @media (min-width: 1024px) { .pp-hero h1 { font-size: 40px; } }
-        .pp-hero-sub { font-size: 14px; color: rgba(199,210,254,0.9); margin: 0; }
-
-        /* Body */
-        .pp-body {
-          max-width: 1200px; margin: 0 auto;
-          padding: 32px 24px 80px; box-sizing: border-box;
-        }
-
-        /* Mobile filter button */
-        .pp-filter-btn {
-          display: flex; align-items: center; gap: 8px;
-          margin-bottom: 24px; padding: 10px 18px;
-          border-radius: 12px;
-          background: var(--pp-accentl);
-          border: 1.5px solid var(--pp-border);
-          color: var(--pp-accent);
-          font-size: 13px; font-weight: 700; font-family: inherit;
-          cursor: pointer;
-          transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
-          animation: ppSlideUp 0.6s cubic-bezier(0.22,1,0.36,1) 0.1s both;
-        }
-        .pp-filter-btn:hover {
-          background: var(--pp-accent); color: white;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 14px rgba(79,70,229,0.25);
-        }
-        @media (min-width: 1024px) { .pp-filter-btn { display: none; } }
-
-        /* Layout */
-        .pp-layout { display: flex; gap: 32px; }
-
-        /* Sidebar */
-        .pp-sidebar { display: none; width: 256px; flex-shrink: 0; }
-        @media (min-width: 1024px) { .pp-sidebar { display: block; } }
-        .pp-sidebar-sticky { position: sticky; top: 96px; }
-        .pp-sidebar-inner {
-          background: var(--pp-surface);
-          border: 1.5px solid var(--pp-border);
-          border-radius: 20px; padding: 24px;
-          animation: ppSlideUp 0.65s cubic-bezier(0.22,1,0.36,1) 0.15s both;
-        }
-        .pp-sidebar-title {
-          font-size: 11px; font-weight: 800; color: var(--pp-text);
-          letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 20px;
-        }
-
-        /* Drawer */
-        .pp-drawer-overlay { position: fixed; inset: 0; z-index: 50; }
-        .pp-drawer-bg {
-          position: absolute; inset: 0;
-          background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
-          animation: ppFadeIn 0.25s ease both;
-        }
-        .pp-drawer {
-          position: absolute; left: 0; top: 0;
-          height: 100%; width: 300px; max-width: 85vw;
-          background: var(--pp-bg);
-          border-right: 1.5px solid var(--pp-border);
-          padding: 28px 24px; overflow-y: auto;
-          box-shadow: 4px 0 32px rgba(0,0,0,0.15);
-          animation: ppSlideInLeft 0.3s cubic-bezier(0.22,1,0.36,1) both;
-        }
-        .pp-drawer-header {
-          display: flex; align-items: center;
-          justify-content: space-between; margin-bottom: 28px;
-        }
-        .pp-drawer-header h2 {
-          font-size: 16px; font-weight: 800;
-          color: var(--pp-text); letter-spacing: -0.01em; margin: 0;
-        }
-        .pp-drawer-close {
-          width: 34px; height: 34px; border-radius: 10px;
-          border: 1.5px solid var(--pp-border);
-          background: var(--pp-surface);
-          display: flex; align-items: center; justify-content: center;
-          cursor: pointer; color: var(--pp-text2);
-          transition: background 0.2s, color 0.2s, transform 0.15s;
-        }
-        .pp-drawer-close:hover {
-          background: var(--pp-accent); color: white;
-          border-color: var(--pp-accent); transform: scale(1.08);
-        }
-
-        /* Main */
-        .pp-main {
-          flex: 1; min-width: 0;
-          animation: ppSlideUp 0.65s cubic-bezier(0.22,1,0.36,1) 0.2s both;
-        }
-
-        /* Error */
-        .pp-error {
-          display: flex; flex-direction: column;
-          align-items: center; justify-content: center;
-          padding: 96px 24px; text-align: center;
-          background: var(--pp-surface);
-          border: 1.5px solid var(--pp-border);
-          border-radius: 24px;
-        }
-        .pp-error-icon {
-          width: 72px; height: 72px;
-          background: var(--pp-bg); border: 1.5px solid var(--pp-border);
-          border-radius: 22px;
-          display: flex; align-items: center; justify-content: center;
-          margin-bottom: 20px;
-          animation: ppPop 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
-        }
-        .pp-error h3 {
-          font-size: 18px; font-weight: 800; color: var(--pp-text);
-          letter-spacing: -0.02em; margin: 0 0 8px;
-        }
-        .pp-error p { font-size: 14px; color: var(--pp-text2); margin: 0; }
-
-        .pp-pagination {
-          margin-top: 40px;
-          animation: ppSlideUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.3s both;
-        }
-
-        /* Keyframes */
-        @keyframes ppSlideUp {
-          from { opacity: 0; transform: translateY(22px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes ppSlideInLeft {
-          from { opacity: 0; transform: translateX(-24px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes ppFadeIn {
-          from { opacity: 0; } to { opacity: 1; }
-        }
-        @keyframes ppFloat {
-          0%, 100% { transform: translateY(0px); }
-          50%       { transform: translateY(-16px); }
-        }
-        @keyframes ppPop {
-          from { opacity: 0; transform: scale(0.6) rotate(-8deg); }
-          to   { opacity: 1; transform: scale(1) rotate(0deg); }
-        }
-      `}</style>
-
-      <div className="pp-root">
-
-        {/* Hero */}
+        {/* ── Hero ── */}
         <div className="pp-hero">
+          <div className="pp-hero-grain" />
           <div className="pp-hero-blob pp-hero-blob-tl" />
           <div className="pp-hero-blob pp-hero-blob-br" />
           <div className="pp-hero-inner">
-            <h1>{heading}</h1>
+            <div className="pp-hero-tag">
+              <Sparkles size={11} />
+              ShopVerse Store
+            </div>
+            <h1 className="pp-hero-title">{heading}</h1>
             <p className="pp-hero-sub">
               {loading
-                ? 'Searching for the best products…'
-                : `Showing ${products.length} product${products.length !== 1 ? 's' : ''}`}
+                ? 'Finding the best products for you…'
+                : `${products.length} product${products.length !== 1 ? 's' : ''} available`}
             </p>
           </div>
         </div>
 
-        {/* Body */}
+        {/* ── Body ── */}
         <div className="pp-body">
 
-          <button className="pp-filter-btn" onClick={() => setFiltersOpen(true)}>
-            <SlidersHorizontal size={16} />
-            Filters
-          </button>
+          {/* Mobile filter bar */}
+          <div className="pp-mobile-bar">
+            <button className="pp-filter-btn" onClick={() => setFiltersOpen(true)}>
+              <SlidersHorizontal size={15} />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="pp-filter-count">{activeFilterCount}</span>
+              )}
+            </button>
+
+            {/* Quick category pills — mobile only */}
+            <div className="pp-cat-pills">
+              <button
+                className={`pp-cat-pill ${!category ? 'pp-cat-pill--active' : ''}`}
+                onClick={() => updateFilter('category', '')}
+              >All</button>
+              {CATEGORIES.slice(0, 5).map(c => (
+                <button
+                  key={c.slug}
+                  className={`pp-cat-pill ${category === c.slug ? 'pp-cat-pill--active' : ''}`}
+                  onClick={() => updateFilter('category', c.slug)}
+                >{c.name}</button>
+              ))}
+            </div>
+          </div>
 
           <div className="pp-layout">
 
@@ -303,13 +141,11 @@ export default function ProductsPage() {
               </div>
             )}
 
-            {/* Main */}
+            {/* Main content */}
             <main className="pp-main">
               {error ? (
                 <div className="pp-error">
-                  <div className="pp-error-icon">
-                    <Package size={30} color="var(--pp-text3)" />
-                  </div>
+                  <div className="pp-error-icon"><Package size={30} /></div>
                   <h3>Something went wrong</h3>
                   <p>{error}</p>
                 </div>
@@ -328,10 +164,297 @@ export default function ProductsPage() {
                 </>
               )}
             </main>
-
           </div>
         </div>
       </div>
     </>
+  )
+}
+
+function PPStyles() {
+  return (
+    <style>{`
+      @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+
+      :root {
+        --pp-bg:       #faf9f7;
+        --pp-surface:  #ffffff;
+        --pp-border:   #ece9e3;
+        --pp-text:     #18160f;
+        --pp-text2:    #6b6257;
+        --pp-text3:    #a8a098;
+        --pp-accent:   #e8643a;
+        --pp-accent2:  #c94e22;
+        --pp-accentl:  rgba(232,100,58,0.1);
+        --pp-accentb:  rgba(232,100,58,0.22);
+        --pp-radius:   14px;
+        --ff-head:     'Syne', sans-serif;
+        --ff-body:     'DM Sans', sans-serif;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --pp-bg:      #0e0d0b;
+          --pp-surface: #171512;
+          --pp-border:  #2a2620;
+          --pp-text:    #f0ebe3;
+          --pp-text2:   #948880;
+          --pp-text3:   #5a5248;
+          --pp-accentl: rgba(232,100,58,0.12);
+          --pp-accentb: rgba(232,100,58,0.2);
+        }
+      }
+
+      .pp-root {
+        min-height: 100vh;
+        background: var(--pp-bg);
+        font-family: var(--ff-body);
+        opacity: 0;
+        transition: opacity 0.35s ease;
+      }
+      .pp-root--in { opacity: 1; }
+
+      /* ── Hero ── */
+      .pp-hero {
+        position: relative; overflow: hidden;
+        padding: 52px 24px 48px;
+        background: linear-gradient(140deg, #1a1208 0%, #2d1f0e 40%, #3b1a06 100%);
+      }
+      .pp-hero-grain {
+        position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0.4;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+        background-size: 200px;
+      }
+      .pp-hero-blob {
+        position: absolute; border-radius: 50%;
+        pointer-events: none; filter: blur(64px); z-index: 1;
+      }
+      .pp-hero-blob-tl {
+        top: -80px; left: -60px; width: 280px; height: 280px;
+        background: rgba(232,100,58,0.15);
+        animation: ppFloat 9s ease-in-out infinite;
+      }
+      .pp-hero-blob-br {
+        bottom: -100px; right: -80px; width: 360px; height: 360px;
+        background: rgba(180,60,10,0.12);
+        animation: ppFloat 11s ease-in-out infinite reverse;
+      }
+      .pp-hero-inner {
+        position: relative; z-index: 2;
+        max-width: 1200px; margin: 0 auto;
+        animation: ppSlideUp 0.65s cubic-bezier(0.22,1,0.36,1) both;
+      }
+      .pp-hero-tag {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 4px 12px; border-radius: 20px;
+        background: rgba(232,100,58,0.18);
+        border: 1px solid rgba(232,100,58,0.3);
+        color: #f0956a;
+        font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+        margin-bottom: 14px;
+        text-transform: uppercase;
+      }
+      .pp-hero-title {
+        font-family: var(--ff-head);
+        font-size: clamp(26px, 5vw, 42px);
+        font-weight: 800; color: #f5ede2;
+        letter-spacing: -0.03em; margin: 0 0 10px;
+        line-height: 1.1;
+      }
+      .pp-hero-sub {
+        font-size: 14px; color: rgba(200,185,165,0.8); margin: 0;
+      }
+
+      /* ── Body ── */
+      .pp-body {
+        max-width: 1200px; margin: 0 auto;
+        padding: 28px 16px 80px;
+        box-sizing: border-box;
+      }
+      @media (min-width: 768px) { .pp-body { padding: 32px 24px 80px; } }
+
+      /* ── Mobile bar ── */
+      .pp-mobile-bar {
+        display: flex; align-items: center; gap: 10px;
+        margin-bottom: 20px; overflow: hidden;
+      }
+      @media (min-width: 1024px) { .pp-mobile-bar { display: none; } }
+
+      .pp-filter-btn {
+        display: inline-flex; align-items: center; gap: 7px;
+        flex-shrink: 0;
+        padding: 9px 14px; border-radius: 10px;
+        border: 1.5px solid var(--pp-border);
+        background: var(--pp-surface);
+        color: var(--pp-text2);
+        font-family: var(--ff-body); font-size: 13px; font-weight: 600;
+        cursor: pointer; transition: all 0.18s;
+      }
+      .pp-filter-btn:hover { border-color: var(--pp-accent); color: var(--pp-accent); }
+      .pp-filter-count {
+        width: 18px; height: 18px; border-radius: 50%;
+        background: var(--pp-accent); color: #fff;
+        font-size: 10px; font-weight: 800;
+        display: flex; align-items: center; justify-content: center;
+      }
+
+      /* Category pills */
+      .pp-cat-pills {
+        display: flex; gap: 7px;
+        overflow-x: auto; flex: 1;
+        scrollbar-width: none; -ms-overflow-style: none;
+        padding-bottom: 2px;
+      }
+      .pp-cat-pills::-webkit-scrollbar { display: none; }
+      .pp-cat-pill {
+        flex-shrink: 0;
+        padding: 7px 13px; border-radius: 20px;
+        border: 1.5px solid var(--pp-border);
+        background: var(--pp-surface);
+        color: var(--pp-text2);
+        font-family: var(--ff-body); font-size: 12px; font-weight: 600;
+        cursor: pointer; white-space: nowrap;
+        transition: all 0.18s;
+      }
+      .pp-cat-pill:hover { border-color: var(--pp-accent); color: var(--pp-accent); }
+      .pp-cat-pill--active {
+        background: var(--pp-accent); border-color: var(--pp-accent);
+        color: #fff;
+        box-shadow: 0 3px 10px var(--pp-accentb);
+      }
+
+      /* ── Layout ── */
+      .pp-layout { display: flex; gap: 28px; align-items: flex-start; }
+
+      /* ── Sidebar ── */
+      .pp-sidebar { display: none; width: 248px; flex-shrink: 0; }
+      @media (min-width: 1024px) { .pp-sidebar { display: block; } }
+      .pp-sidebar-sticky { position: sticky; top: 88px; }
+      .pp-sidebar-inner {
+        background: var(--pp-surface);
+        border: 1.5px solid var(--pp-border);
+        border-radius: 18px; padding: 22px;
+        animation: ppSlideUp 0.6s cubic-bezier(0.22,1,0.36,1) 0.1s both;
+      }
+      .pp-sidebar-title {
+        font-family: var(--ff-head);
+        font-size: 11px; font-weight: 800; color: var(--pp-text3);
+        letter-spacing: 0.1em; text-transform: uppercase; margin: 0 0 18px;
+      }
+
+      /* ── Drawer ── */
+      .pp-drawer-overlay { position: fixed; inset: 0; z-index: 100; }
+      .pp-drawer-bg {
+        position: absolute; inset: 0;
+        background: rgba(0,0,0,0.55); backdrop-filter: blur(5px);
+        animation: ppFadeIn 0.22s ease both;
+      }
+      .pp-drawer {
+        position: absolute; left: 0; top: 0;
+        height: 100%; width: 290px; max-width: 88vw;
+        background: var(--pp-bg);
+        border-right: 1.5px solid var(--pp-border);
+        padding: 24px 20px; overflow-y: auto; box-sizing: border-box;
+        box-shadow: 6px 0 40px rgba(0,0,0,0.18);
+        animation: ppSlideInLeft 0.28s cubic-bezier(0.22,1,0.36,1) both;
+      }
+      .pp-drawer-header {
+        display: flex; align-items: center;
+        justify-content: space-between; margin-bottom: 24px;
+      }
+      .pp-drawer-header h2 {
+        font-family: var(--ff-head);
+        font-size: 16px; font-weight: 800; color: var(--pp-text); margin: 0;
+      }
+      .pp-drawer-close {
+        width: 32px; height: 32px; border-radius: 9px;
+        border: 1.5px solid var(--pp-border); background: var(--pp-surface);
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; color: var(--pp-text2); transition: all 0.15s;
+      }
+      .pp-drawer-close:hover {
+        background: var(--pp-accent); color: #fff; border-color: var(--pp-accent);
+      }
+
+      /* ── Main ── */
+      .pp-main {
+        flex: 1; min-width: 0;
+        animation: ppSlideUp 0.6s cubic-bezier(0.22,1,0.36,1) 0.15s both;
+      }
+
+      /* ── Override ProductGrid for single column on mobile ── */
+      @media (max-width: 639px) {
+        .pg-grid {
+          grid-template-columns: 1fr !important;
+          gap: 12px !important;
+        }
+        /* Make each card horizontal on mobile */
+        .pg-card-wrap > * {
+          display: flex !important;
+          flex-direction: row !important;
+          align-items: stretch !important;
+          min-height: 110px !important;
+        }
+        /* Product image — left side */
+        .pg-card-wrap > * > *:first-child,
+        .pg-card-wrap [class*="img"],
+        .pg-card-wrap [class*="image"],
+        .pg-card-wrap [class*="thumb"] {
+          width: 110px !important;
+          min-width: 110px !important;
+          height: auto !important;
+          aspect-ratio: unset !important;
+          flex-shrink: 0 !important;
+          border-radius: 12px 0 0 12px !important;
+        }
+      }
+
+      /* ── Error ── */
+      .pp-error {
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        padding: 80px 24px; text-align: center;
+        background: var(--pp-surface);
+        border: 1.5px solid var(--pp-border);
+        border-radius: 20px;
+      }
+      .pp-error-icon {
+        width: 64px; height: 64px; border-radius: 18px;
+        background: var(--pp-bg); border: 1.5px solid var(--pp-border);
+        display: flex; align-items: center; justify-content: center;
+        color: var(--pp-text3); margin-bottom: 16px;
+        animation: ppPop 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+      }
+      .pp-error h3 {
+        font-family: var(--ff-head); font-size: 17px; font-weight: 800;
+        color: var(--pp-text); letter-spacing: -0.02em; margin: 0 0 8px;
+      }
+      .pp-error p { font-size: 13px; color: var(--pp-text2); margin: 0; }
+
+      .pp-pagination {
+        margin-top: 36px;
+        animation: ppSlideUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.25s both;
+      }
+
+      /* ── Keyframes ── */
+      @keyframes ppSlideUp {
+        from { opacity: 0; transform: translateY(18px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes ppSlideInLeft {
+        from { opacity: 0; transform: translateX(-20px); }
+        to   { opacity: 1; transform: translateX(0); }
+      }
+      @keyframes ppFadeIn {
+        from { opacity: 0; } to { opacity: 1; }
+      }
+      @keyframes ppFloat {
+        0%, 100% { transform: translateY(0px); }
+        50%       { transform: translateY(-18px); }
+      }
+      @keyframes ppPop {
+        from { opacity: 0; transform: scale(0.6); }
+        to   { opacity: 1; transform: scale(1); }
+      }
+    `}</style>
   )
 }
