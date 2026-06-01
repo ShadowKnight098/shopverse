@@ -86,7 +86,6 @@ export default function ProductsPage() {
               )}
             </button>
 
-            {/* Quick category pills — mobile only */}
             <div className="pp-cat-pills">
               <button
                 className={`pp-cat-pill ${!category ? 'pp-cat-pill--active' : ''}`}
@@ -190,6 +189,7 @@ function PPStyles() {
         --pp-radius:   14px;
         --ff-head:     'Syne', sans-serif;
         --ff-body:     'DM Sans', sans-serif;
+        --nav-h:       64px;
       }
       @media (prefers-color-scheme: dark) {
         :root {
@@ -204,20 +204,26 @@ function PPStyles() {
         }
       }
 
+      /* ── Root — offset by navbar height ── */
       .pp-root {
         min-height: 100vh;
         background: var(--pp-bg);
         font-family: var(--ff-body);
         opacity: 0;
         transition: opacity 0.35s ease;
+        padding-top: var(--nav-h);
       }
       .pp-root--in { opacity: 1; }
 
       /* ── Hero ── */
       .pp-hero {
-        position: relative; overflow: hidden;
-        padding: 52px 24px 48px;
+        position: relative;
+        overflow: hidden;
+        padding: 48px 24px 44px;
         background: linear-gradient(140deg, #1a1208 0%, #2d1f0e 40%, #3b1a06 100%);
+      }
+      @media (max-width: 639px) {
+        .pp-hero { padding: 32px 16px 28px; }
       }
       .pp-hero-grain {
         position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0.4;
@@ -255,7 +261,7 @@ function PPStyles() {
       }
       .pp-hero-title {
         font-family: var(--ff-head);
-        font-size: clamp(26px, 5vw, 42px);
+        font-size: clamp(22px, 5vw, 42px);
         font-weight: 800; color: #f5ede2;
         letter-spacing: -0.03em; margin: 0 0 10px;
         line-height: 1.1;
@@ -267,7 +273,7 @@ function PPStyles() {
       /* ── Body ── */
       .pp-body {
         max-width: 1200px; margin: 0 auto;
-        padding: 28px 16px 80px;
+        padding: 24px 16px 80px;
         box-sizing: border-box;
       }
       @media (min-width: 768px) { .pp-body { padding: 32px 24px 80px; } }
@@ -275,7 +281,7 @@ function PPStyles() {
       /* ── Mobile bar ── */
       .pp-mobile-bar {
         display: flex; align-items: center; gap: 10px;
-        margin-bottom: 20px; overflow: hidden;
+        margin-bottom: 16px; overflow: hidden;
       }
       @media (min-width: 1024px) { .pp-mobile-bar { display: none; } }
 
@@ -328,7 +334,7 @@ function PPStyles() {
       /* ── Sidebar ── */
       .pp-sidebar { display: none; width: 248px; flex-shrink: 0; }
       @media (min-width: 1024px) { .pp-sidebar { display: block; } }
-      .pp-sidebar-sticky { position: sticky; top: 88px; }
+      .pp-sidebar-sticky { position: sticky; top: calc(var(--nav-h) + 16px); }
       .pp-sidebar-inner {
         background: var(--pp-surface);
         border: 1.5px solid var(--pp-border);
@@ -342,7 +348,7 @@ function PPStyles() {
       }
 
       /* ── Drawer ── */
-      .pp-drawer-overlay { position: fixed; inset: 0; z-index: 100; }
+      .pp-drawer-overlay { position: fixed; inset: 0; z-index: 150; }
       .pp-drawer-bg {
         position: absolute; inset: 0;
         background: rgba(0,0,0,0.55); backdrop-filter: blur(5px);
@@ -381,30 +387,11 @@ function PPStyles() {
         animation: ppSlideUp 0.6s cubic-bezier(0.22,1,0.36,1) 0.15s both;
       }
 
-      /* ── Override ProductGrid for single column on mobile ── */
+      /* ── Mobile product grid — 2 columns, no card hacks ── */
       @media (max-width: 639px) {
         .pg-grid {
-          grid-template-columns: 1fr !important;
-          gap: 12px !important;
-        }
-        /* Make each card horizontal on mobile */
-        .pg-card-wrap > * {
-          display: flex !important;
-          flex-direction: row !important;
-          align-items: stretch !important;
-          min-height: 110px !important;
-        }
-        /* Product image — left side */
-        .pg-card-wrap > * > *:first-child,
-        .pg-card-wrap [class*="img"],
-        .pg-card-wrap [class*="image"],
-        .pg-card-wrap [class*="thumb"] {
-          width: 110px !important;
-          min-width: 110px !important;
-          height: auto !important;
-          aspect-ratio: unset !important;
-          flex-shrink: 0 !important;
-          border-radius: 12px 0 0 12px !important;
+          grid-template-columns: repeat(2, 1fr) !important;
+          gap: 10px !important;
         }
       }
 

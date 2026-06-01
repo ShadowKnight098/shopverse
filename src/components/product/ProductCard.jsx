@@ -92,17 +92,11 @@ export default function ProductCard({ product, compact = false }) {
           transition: transform 0.2s, background 0.2s;
         }
         .pc-wish:hover { transform: scale(1.12); }
-        .pc-wish.active {
-          background: #fdf2f8;
-          color: #ec4899;
-        }
-        .pc-wish.inactive {
-          background: white;
-          color: #9ca3af;
-        }
+        .pc-wish.active  { background: #fdf2f8; color: #ec4899; }
+        .pc-wish.inactive { background: white; color: #9ca3af; }
         .pc-wish.inactive:hover { color: #ec4899; }
         @media (prefers-color-scheme: dark) {
-          .pc-wish.active  { background: rgba(236,72,153,0.2); color: #f472b6; }
+          .pc-wish.active   { background: rgba(236,72,153,0.2); color: #f472b6; }
           .pc-wish.inactive { background: #334155; color: #94a3b8; }
           .pc-wish.inactive:hover { color: #f472b6; }
         }
@@ -115,7 +109,7 @@ export default function ProductCard({ product, compact = false }) {
           display: block;
           text-decoration: none;
         }
-        .pc-img-wrap.normal { height: 208px; }
+        .pc-img-wrap.normal  { height: 208px; }
         .pc-img-wrap.compact { height: 160px; }
         @media (prefers-color-scheme: dark) {
           .pc-img-wrap { background: rgba(51,65,85,0.5); }
@@ -251,39 +245,25 @@ export default function ProductCard({ product, compact = false }) {
       `}</style>
 
       <div className="pc-card">
-        {/* Discount badge */}
-        {discount && (
-          <span className="pc-discount">-{discount}%</span>
-        )}
+        {discount && <span className="pc-discount">-{discount}%</span>}
 
-        {/* Wishlist */}
         <button
           onClick={handleWishlist}
           className={`pc-wish ${isInWishlist ? 'active' : 'inactive'}`}
           aria-label={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
         >
-          <Heart
-            size={15}
-            style={isInWishlist ? { fill: '#ec4899', color: '#ec4899' } : {}}
-          />
+          <Heart size={15} style={isInWishlist ? { fill: '#ec4899', color: '#ec4899' } : {}} />
         </button>
 
-        {/* Image */}
         <Link
           to={`/products/${product.id}`}
           className={`pc-img-wrap ${compact ? 'compact' : 'normal'}`}
         >
-          <LazyImage
-            src={product.image_url}
-            alt={product.name}
-          />
+          <LazyImage src={product.image_url} alt={product.name} />
         </Link>
 
-        {/* Body */}
         <div className={`pc-body ${compact ? 'compact' : 'normal'}`}>
-          {product.category && (
-            <p className="pc-category">{product.category}</p>
-          )}
+          {product.category && <p className="pc-category">{product.category}</p>}
 
           <Link to={`/products/${product.id}`} className="pc-name">
             {product.name}
