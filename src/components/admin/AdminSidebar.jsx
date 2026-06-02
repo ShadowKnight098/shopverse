@@ -512,6 +512,7 @@ function AdminSidebarStyles() {
         from { opacity: 0; }
         to   { opacity: 1; }
       }
+        
     `}</style>
   );
 }

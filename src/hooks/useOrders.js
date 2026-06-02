@@ -134,11 +134,12 @@ export async function createOrder({ userId, items, totalAmount, shippingAddress 
     // 2. Insert all order items
     const orderItems = items.map((item) => ({
       order_id: order.id,
-      product_id: item.product_id,
-      product_name: item.product_name,
-      product_image: item.product_image,
+      product_id: item.product_id || item.id,
+      product_name: item.product_name || item.name,
+      product_image: item.product_image || item.image_url,
       quantity: item.quantity,
       price: item.price,
+      selected_size: item.selectedSize || item.selected_size || null,
     }));
 
     const { error: itemsError } = await supabase

@@ -116,7 +116,7 @@ export default function CartPage() {
             <div className="cp-items">
               {items.map((item, idx) => (
                 <div
-                  key={item.id}
+                  key={item.cartItemId || item.id}
                   className="cp-card"
                   style={{ animationDelay: `${idx * 60}ms` }}
                 >
@@ -135,7 +135,12 @@ export default function CartPage() {
                         <Link to={`/products/${item.id}`} className="cp-item-name">
                           {item.name}
                         </Link>
-                        <div className="cp-item-prices">
+                        {item.selectedSize && (
+                          <div style={{ marginTop: 2, fontSize: 12, color: 'var(--cp-text3)' }}>
+                            Size: <span style={{ fontWeight: 600, color: 'var(--cp-accent)' }}>{item.selectedSize}</span>
+                          </div>
+                        )}
+                        <div className="cp-item-prices" style={{ marginTop: item.selectedSize ? 4 : 8 }}>
                           <span className="cp-item-price">{formatPrice(item.price)}</span>
                           {item.original_price && item.original_price > item.price && (
                             <span className="cp-item-orig">{formatPrice(item.original_price)}</span>
@@ -145,7 +150,7 @@ export default function CartPage() {
 
                       {/* Remove btn */}
                       <button
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => removeItem(item.cartItemId || item.id)}
                         className="cp-remove-btn"
                         title="Remove"
                       >
@@ -158,7 +163,7 @@ export default function CartPage() {
                       <div className="cp-qty-ctrl">
                         <button
                           className="cp-qty-btn"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.cartItemId || item.id, item.quantity - 1)}
                           disabled={item.quantity <= 1}
                           aria-label="Decrease"
                         >
@@ -167,7 +172,7 @@ export default function CartPage() {
                         <span className="cp-qty-val">{item.quantity}</span>
                         <button
                           className="cp-qty-btn"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.cartItemId || item.id, item.quantity + 1)}
                           aria-label="Increase"
                         >
                           <Plus size={13} />

@@ -13,7 +13,7 @@ export default function TrendingProducts() {
       <style>{`
         .tp-section {
           padding: 64px 16px;
-          max-width: 1280px;
+          width: 100vw;
           margin: 0 auto;
           box-sizing: border-box;
           animation: tpFadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;

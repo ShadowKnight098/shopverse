@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { SlidersHorizontal, X, Package, ChevronDown, Sparkles } from 'lucide-react'
+import { SlidersHorizontal, X, Package, Sparkles } from 'lucide-react'
 import { useProducts } from '../hooks/useProducts'
 import ProductFilters from '../components/product/ProductFilters'
 import ProductGrid from '../components/product/ProductGrid'
@@ -31,10 +31,11 @@ export default function ProductsPage() {
     requestAnimationFrame(() => setMounted(true))
   }, [])
 
+  // Single-key updater — matches ProductFilters' onFilterChange(key, value) signature
   const updateFilter = useCallback((key, value) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev)
-      value ? next.set(key, value) : next.delete(key)
+      value !== '' && value !== undefined ? next.set(key, value) : next.delete(key)
       if (key !== 'page') next.set('page', '1')
       return next
     })
@@ -107,10 +108,11 @@ export default function ProductsPage() {
             <aside className="pp-sidebar">
               <div className="pp-sidebar-sticky">
                 <div className="pp-sidebar-inner">
-                  <p className="pp-sidebar-title">Filters</p>
                   <ProductFilters
-                    category={category} sort={sort}
-                    minPrice={minPrice} maxPrice={maxPrice}
+                    category={category}
+                    sort={sort}
+                    minPrice={minPrice}
+                    maxPrice={maxPrice}
                     onFilterChange={updateFilter}
                   />
                 </div>
@@ -129,8 +131,10 @@ export default function ProductsPage() {
                     </button>
                   </div>
                   <ProductFilters
-                    category={category} sort={sort}
-                    minPrice={minPrice} maxPrice={maxPrice}
+                    category={category}
+                    sort={sort}
+                    minPrice={minPrice}
+                    maxPrice={maxPrice}
                     onFilterChange={(key, value) => {
                       updateFilter(key, value)
                       setFiltersOpen(false)
@@ -184,7 +188,7 @@ function PPStyles() {
         --pp-text3:    #a8a098;
         --pp-accent:   #e8643a;
         --pp-accent2:  #c94e22;
-        --pp-accentl:  rgba(232,100,58,0.1);
+        --pp-accentl:  rgba(232,100,58,0.10);
         --pp-accentb:  rgba(232,100,58,0.22);
         --pp-radius:   14px;
         --ff-head:     'Syne', sans-serif;
@@ -200,11 +204,11 @@ function PPStyles() {
           --pp-text2:   #948880;
           --pp-text3:   #5a5248;
           --pp-accentl: rgba(232,100,58,0.12);
-          --pp-accentb: rgba(232,100,58,0.2);
+          --pp-accentb: rgba(232,100,58,0.20);
         }
       }
 
-      /* ── Root — offset by navbar height ── */
+      /* ── Root ── */
       .pp-root {
         min-height: 100vh;
         background: var(--pp-bg);
@@ -256,15 +260,13 @@ function PPStyles() {
         border: 1px solid rgba(232,100,58,0.3);
         color: #f0956a;
         font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
-        margin-bottom: 14px;
-        text-transform: uppercase;
+        margin-bottom: 14px; text-transform: uppercase;
       }
       .pp-hero-title {
         font-family: var(--ff-head);
         font-size: clamp(22px, 5vw, 42px);
         font-weight: 800; color: #f5ede2;
-        letter-spacing: -0.03em; margin: 0 0 10px;
-        line-height: 1.1;
+        letter-spacing: -0.03em; margin: 0 0 10px; line-height: 1.1;
       }
       .pp-hero-sub {
         font-size: 14px; color: rgba(200,185,165,0.8); margin: 0;
@@ -286,12 +288,10 @@ function PPStyles() {
       @media (min-width: 1024px) { .pp-mobile-bar { display: none; } }
 
       .pp-filter-btn {
-        display: inline-flex; align-items: center; gap: 7px;
-        flex-shrink: 0;
+        display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0;
         padding: 9px 14px; border-radius: 10px;
         border: 1.5px solid var(--pp-border);
-        background: var(--pp-surface);
-        color: var(--pp-text2);
+        background: var(--pp-surface); color: var(--pp-text2);
         font-family: var(--ff-body); font-size: 13px; font-weight: 600;
         cursor: pointer; transition: all 0.18s;
       }
@@ -303,28 +303,21 @@ function PPStyles() {
         display: flex; align-items: center; justify-content: center;
       }
 
-      /* Category pills */
       .pp-cat-pills {
-        display: flex; gap: 7px;
-        overflow-x: auto; flex: 1;
-        scrollbar-width: none; -ms-overflow-style: none;
-        padding-bottom: 2px;
+        display: flex; gap: 7px; overflow-x: auto; flex: 1;
+        scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 2px;
       }
       .pp-cat-pills::-webkit-scrollbar { display: none; }
       .pp-cat-pill {
-        flex-shrink: 0;
-        padding: 7px 13px; border-radius: 20px;
-        border: 1.5px solid var(--pp-border);
-        background: var(--pp-surface);
-        color: var(--pp-text2);
-        font-family: var(--ff-body); font-size: 12px; font-weight: 600;
-        cursor: pointer; white-space: nowrap;
+        flex-shrink: 0; padding: 7px 13px; border-radius: 20px;
+        border: 1.5px solid var(--pp-border); background: var(--pp-surface);
+        color: var(--pp-text2); font-family: var(--ff-body);
+        font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
         transition: all 0.18s;
       }
       .pp-cat-pill:hover { border-color: var(--pp-accent); color: var(--pp-accent); }
       .pp-cat-pill--active {
-        background: var(--pp-accent); border-color: var(--pp-accent);
-        color: #fff;
+        background: var(--pp-accent); border-color: var(--pp-accent); color: #fff;
         box-shadow: 0 3px 10px var(--pp-accentb);
       }
 
@@ -341,11 +334,6 @@ function PPStyles() {
         border-radius: 18px; padding: 22px;
         animation: ppSlideUp 0.6s cubic-bezier(0.22,1,0.36,1) 0.1s both;
       }
-      .pp-sidebar-title {
-        font-family: var(--ff-head);
-        font-size: 11px; font-weight: 800; color: var(--pp-text3);
-        letter-spacing: 0.1em; text-transform: uppercase; margin: 0 0 18px;
-      }
 
       /* ── Drawer ── */
       .pp-drawer-overlay { position: fixed; inset: 0; z-index: 150; }
@@ -357,8 +345,7 @@ function PPStyles() {
       .pp-drawer {
         position: absolute; left: 0; top: 0;
         height: 100%; width: 290px; max-width: 88vw;
-        background: var(--pp-bg);
-        border-right: 1.5px solid var(--pp-border);
+        background: var(--pp-bg); border-right: 1.5px solid var(--pp-border);
         padding: 24px 20px; overflow-y: auto; box-sizing: border-box;
         box-shadow: 6px 0 40px rgba(0,0,0,0.18);
         animation: ppSlideInLeft 0.28s cubic-bezier(0.22,1,0.36,1) both;
@@ -387,22 +374,13 @@ function PPStyles() {
         animation: ppSlideUp 0.6s cubic-bezier(0.22,1,0.36,1) 0.15s both;
       }
 
-      /* ── Mobile product grid — 2 columns, no card hacks ── */
-      @media (max-width: 639px) {
-        .pg-grid {
-          grid-template-columns: repeat(2, 1fr) !important;
-          gap: 10px !important;
-        }
-      }
-
       /* ── Error ── */
       .pp-error {
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
         padding: 80px 24px; text-align: center;
         background: var(--pp-surface);
-        border: 1.5px solid var(--pp-border);
-        border-radius: 20px;
+        border: 1.5px solid var(--pp-border); border-radius: 20px;
       }
       .pp-error-icon {
         width: 64px; height: 64px; border-radius: 18px;

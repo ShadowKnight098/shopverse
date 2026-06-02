@@ -10,7 +10,7 @@ export default function AdminRoute() {
 
   useEffect(() => {
     const handleResize = () => {
-      setSidebarOpen(window.innerWidth >= 1024)
+      if (window.innerWidth >= 1024) setSidebarOpen(false)
     }
     handleResize()
     window.addEventListener('resize', handleResize)
@@ -29,10 +29,8 @@ export default function AdminRoute() {
           min-height: 100vh;
           background: #0a0909;
         }
-
-        /* pushes content right of the fixed sidebar on desktop */
         .ar-spacer {
-          width: 252px;
+          width: 240px;
           flex-shrink: 0;
           display: none;
         }
@@ -45,7 +43,6 @@ export default function AdminRoute() {
           flex-direction: column;
         }
 
-        /* mobile topbar */
         .ar-topbar {
           display: flex;
           align-items: center;
@@ -82,7 +79,6 @@ export default function AdminRoute() {
           text-transform: uppercase;
         }
 
-        /* page content */
         .ar-content {
           flex: 1;
           padding: 32px 20px 60px;
@@ -91,30 +87,13 @@ export default function AdminRoute() {
         @media (min-width: 640px)  { .ar-content { padding: 36px 28px 60px; } }
         @media (min-width: 1024px) { .ar-content { padding: 40px 40px 60px; } }
 
-        /* mobile overlay */
-        .ar-overlay {
-          display: none;
-          position: fixed;
-          inset: 0;
-          z-index: 39;
-          background: rgba(0,0,0,0.55);
-          backdrop-filter: blur(3px);
-          animation: arFadeIn 0.2s ease both;
-        }
-        .ar-overlay.visible { display: block; }
-        @media (min-width: 1024px) { .ar-overlay { display: none !important; } }
-
         @keyframes arFadeIn { from { opacity: 0; } to { opacity: 1; } }
       `}</style>
 
       <div className="ar-root">
-        <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        {/* ✅ fixed: mobileOpen not isOpen */}
+        <AdminSidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div className="ar-spacer" />
-
-        <div
-          className={`ar-overlay ${sidebarOpen ? 'visible' : ''}`}
-          onClick={() => setSidebarOpen(false)}
-        />
 
         <div className="ar-body">
           <div className="ar-topbar">
@@ -132,19 +111,15 @@ export default function AdminRoute() {
   )
 }
 
-/* ── Shared loading screen ── */
 function LoadingScreen({ label, color = '#6366f1' }) {
   return (
     <>
       <style>{`
         .ls-wrap {
           min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          display: flex; align-items: center; justify-content: center;
           background: #0a0909;
-          flex-direction: column;
-          gap: 16px;
+          flex-direction: column; gap: 16px;
         }
         .ls-ring {
           width: 40px; height: 40px;
@@ -153,11 +128,7 @@ function LoadingScreen({ label, color = '#6366f1' }) {
           border-top-color: var(--ls-color);
           animation: lsSpin 0.75s linear infinite;
         }
-        .ls-label {
-          font-size: 13px;
-          color: rgba(255,255,255,0.35);
-          margin: 0;
-        }
+        .ls-label { font-size: 13px; color: rgba(255,255,255,0.35); margin: 0; }
         @keyframes lsSpin { to { transform: rotate(360deg); } }
       `}</style>
       <div className="ls-wrap">

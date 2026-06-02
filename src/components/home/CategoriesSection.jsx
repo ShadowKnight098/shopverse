@@ -26,8 +26,8 @@ export default function CategoriesSection() {
     <>
       <style>{`
         .cat-section {
-          padding: 64px 16px;
-          max-width: 1280px;
+          padding: 64px 40px;
+          width: 100vw;
           margin: 0 auto;
           box-sizing: border-box;
         }
@@ -62,6 +62,7 @@ export default function CategoriesSection() {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
           gap: 14px;
+          padding:0 1.5rem;
         }
         @media (min-width: 480px) {
           .cat-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -155,7 +156,9 @@ export default function CategoriesSection() {
         @keyframes catFadeUp {
           from { opacity: 0; transform: translateY(20px); }
           to   { opacity: 1; transform: translateY(0); }
+
         }
+        
       `}</style>
 
       <section className="cat-section">

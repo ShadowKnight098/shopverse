@@ -76,7 +76,9 @@ export function generateWhatsAppLink(cartItems = [], totalAmount = 0, userInfo =
   message += `📦 *Order Items:*\n\n`
   cartItems.forEach((item, index) => {
     const itemTotal = item.price * item.quantity
-    message += `${index + 1}. *${item.name}*\n`
+    const sizeVal = item.selectedSize || item.selected_size;
+    const sizeSuffix = sizeVal ? ` (Size: ${sizeVal})` : '';
+    message += `${index + 1}. *${item.name}${sizeSuffix}*\n`
     message += `   Qty: ${item.quantity} × ${formatPrice(item.price)} = ${formatPrice(itemTotal)}\n\n`
   })
 

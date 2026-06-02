@@ -81,9 +81,9 @@ export default function UpcomingSalesPreview() {
             </h2>
 
             {/* Discount */}
-            {upcomingSale.discount_percentage && (
+            {upcomingSale.discount && (
               <p className="text-5xl sm:text-6xl font-extrabold text-white/90 mb-6">
-                {upcomingSale.discount_percentage}% OFF
+                {upcomingSale.discount}% OFF
               </p>
             )}
 

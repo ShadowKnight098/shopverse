@@ -32,6 +32,7 @@ export default function DealerEditProductPage() {
         image_url:   data.image_url || '',
         is_featured: data.is_featured || false,
         is_trending: data.is_trending || false,
+        sizes:       data.sizes || [],
       });
       setLoading(false);
       requestAnimationFrame(() => setMounted(true));
@@ -65,6 +66,7 @@ export default function DealerEditProductPage() {
       image_url:   form.image_url,
       is_featured: form.is_featured,
       is_trending: form.is_trending,
+      sizes:       form.category === 'fashion' ? form.sizes : null,
     }).eq('id', id).eq('dealer_id', user.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
@@ -191,6 +193,45 @@ export default function DealerEditProductPage() {
               </div>
               {errors.category && <p className="dep-field-error">{errors.category}</p>}
             </div>
+
+            {form.category === 'fashion' && (
+              <div className="dep-field" style={{ marginTop: '12px' }}>
+                <label className="dep-label">Available Sizes</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
+                  {['S', 'M', 'L', 'XL', 'XXL'].map((size) => {
+                    const hasSize = form.sizes?.includes(size);
+                    return (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => {
+                          const currentSizes = form.sizes || [];
+                          const nextSizes = currentSizes.includes(size)
+                            ? currentSizes.filter((s) => s !== size)
+                            : [...currentSizes, size];
+                          setForm((f) => ({ ...f, sizes: nextSizes }));
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '10px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          border: '1.5px solid var(--dep-border)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          background: hasSize ? 'var(--dep-accent)' : 'var(--dep-surface)',
+                          color: hasSize ? '#fff' : 'var(--dep-text2)',
+                          borderColor: hasSize ? 'var(--dep-accent)' : 'var(--dep-border)',
+                          boxShadow: hasSize ? '0 2px 8px rgba(99,102,241,0.2)' : 'none',
+                        }}
+                      >
+                        {size}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ── Visibility ── */}

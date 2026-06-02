@@ -10,6 +10,7 @@ import ImageUpload from '../components/common/ImageUpload';
 const EMPTY = {
   name: '', description: '', price: '', category: '',
   stock: '', image_url: '', is_featured: false, is_trending: false,
+  sizes: [],
 };
 
 export default function DealerAddProductPage() {
@@ -52,6 +53,7 @@ export default function DealerAddProductPage() {
       is_featured: form.is_featured,
       is_trending: form.is_trending,
       dealer_id:   user.id,
+      sizes:       form.category === 'fashion' ? form.sizes : null,
     });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
@@ -189,6 +191,45 @@ export default function DealerAddProductPage() {
               </div>
               {errors.category && <p className="dap-field-error">{errors.category}</p>}
             </div>
+
+            {form.category === 'fashion' && (
+              <div className="dap-field" style={{ marginTop: '12px' }}>
+                <label className="dap-label">Available Sizes</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
+                  {['S', 'M', 'L', 'XL', 'XXL'].map((size) => {
+                    const hasSize = form.sizes?.includes(size);
+                    return (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => {
+                          const currentSizes = form.sizes || [];
+                          const nextSizes = currentSizes.includes(size)
+                            ? currentSizes.filter((s) => s !== size)
+                            : [...currentSizes, size];
+                          setForm((f) => ({ ...f, sizes: nextSizes }));
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '10px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          border: '1.5px solid var(--dap-border)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          background: hasSize ? 'var(--dap-accent)' : 'var(--dap-surface)',
+                          color: hasSize ? '#fff' : 'var(--dap-text2)',
+                          borderColor: hasSize ? 'var(--dap-accent)' : 'var(--dap-border)',
+                          boxShadow: hasSize ? '0 2px 8px rgba(99,102,241,0.2)' : 'none',
+                        }}
+                      >
+                        {size}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ── Visibility ── */}

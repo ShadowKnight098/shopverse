@@ -73,11 +73,27 @@ export default function CheckoutPage() {
       setSuccess(true);
       clearCart();
       toast.success('Order placed successfully!');
-      const waLink = generateWhatsAppLink(
-        items.map(i => ({ ...i, quantity: i.quantity || 1 })), finalTotal,
-        { name: profile?.name || shippingAddressData.full_name, phone: shippingAddressData.phone }
-      );
-      window.open(waLink, '_blank');
+      // Group items by dealer phone and send to respective dealers
+      const itemsByDealer = {};
+      items.forEach((item) => {
+        const phone = item.dealerPhone || item.profiles?.phone || '';
+        if (!itemsByDealer[phone]) {
+          itemsByDealer[phone] = [];
+        }
+        itemsByDealer[phone].push(item);
+      });
+
+      Object.entries(itemsByDealer).forEach(([phone, dealerItems]) => {
+        const phoneToUse = phone.trim() || null; // if blank, fallback inside generateWhatsAppLink
+        const dealerTotal = dealerItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+        const waLink = generateWhatsAppLink(
+          dealerItems.map(i => ({ ...i, quantity: i.quantity || 1 })),
+          dealerTotal,
+          { name: profile?.name || shippingAddressData.full_name, phone: shippingAddressData.phone },
+          phoneToUse
+        );
+        window.open(waLink, '_blank');
+      });
     } catch (err) {
       toast.error(err.message || 'Failed to place order.');
     } finally {

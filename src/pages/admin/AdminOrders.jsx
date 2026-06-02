@@ -281,6 +281,11 @@ export default function AdminOrders() {
                                     <div className="flex-1 min-w-0">
                                       <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                         {item.product_name || `Product #${item.product_id?.slice(0, 8)}`}
+                                        {item.selected_size && (
+                                          <span className="ml-2 px-1.5 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 rounded">
+                                            Size: {item.selected_size}
+                                          </span>
+                                        )}
                                       </p>
                                       <p className="text-xs text-gray-500 dark:text-gray-400">
                                         Qty: {item.quantity} ×{' '}

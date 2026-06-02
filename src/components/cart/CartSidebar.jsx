@@ -78,22 +78,29 @@ export default function CartSidebar() {
             {/* Items list */}
             <div className="cart-items">
               {items.map((item) => (
-                <div key={item.id || item._id} className="cart-item">
+                <div key={item.cartItemId || item.id} className="cart-item">
                   <div className="cart-item-img-wrap">
                     <LazyImage
-                      src={item.image || item.images?.[0]}
+                      src={item.image_url || item.image || item.images?.[0]}
                       alt={item.name}
                     />
                   </div>
 
                   <div className="cart-item-meta">
                     <h4 className="cart-item-name">{item.name}</h4>
-                    <p className="cart-item-price">₹{(item.price || 0).toFixed(2)}</p>
+                    {item.selectedSize && (
+                      <p className="cart-item-size" style={{ fontSize: '11px', color: 'var(--cart-text3)', margin: '2px 0 0' }}>
+                        Size: <span style={{ fontWeight: '600', color: 'var(--cart-accent)' }}>{item.selectedSize}</span>
+                      </p>
+                    )}
+                    <p className="cart-item-price" style={{ marginTop: item.selectedSize ? '2px' : '0' }}>
+                      ₹{(item.price || 0).toFixed(2)}
+                    </p>
 
                     <div className="cart-item-controls">
                       <button
                         className="cart-qty-btn"
-                        onClick={() => updateQuantity(item.id || item._id, Math.max(1, (item.quantity || 1) - 1))}
+                        onClick={() => updateQuantity(item.cartItemId || item.id, Math.max(1, (item.quantity || 1) - 1))}
                         aria-label="Decrease quantity"
                       >
                         <Minus size={13} />
@@ -101,7 +108,7 @@ export default function CartSidebar() {
                       <span className="cart-qty-value">{item.quantity || 1}</span>
                       <button
                         className="cart-qty-btn"
-                        onClick={() => updateQuantity(item.id || item._id, (item.quantity || 1) + 1)}
+                        onClick={() => updateQuantity(item.cartItemId || item.id, (item.quantity || 1) + 1)}
                         aria-label="Increase quantity"
                       >
                         <Plus size={13} />
@@ -109,7 +116,7 @@ export default function CartSidebar() {
 
                       <button
                         className="cart-remove-btn"
-                        onClick={() => removeItem(item.id || item._id)}
+                        onClick={() => removeItem(item.cartItemId || item.id)}
                         aria-label="Remove item"
                       >
                         <Trash2 size={15} />

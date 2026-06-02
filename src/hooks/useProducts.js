@@ -36,7 +36,7 @@ export function useProducts({
 
       let query = supabase
         .from('products')
-        .select('*', { count: 'exact' });
+        .select('*, profiles(phone, shop_name)', { count: 'exact' });
 
       // --- Filters ---
       if (category) {
@@ -128,7 +128,7 @@ export function useProduct(id) {
 
         const { data, error: queryError } = await supabase
           .from('products')
-          .select('*')
+          .select('*, profiles(phone, shop_name)')
           .eq('id', id)
           .single();
 
@@ -172,7 +172,7 @@ export function useFeaturedProducts() {
 
         const { data, error } = await supabase
           .from('products')
-          .select('*')
+          .select('*, profiles(phone, shop_name)')
           .eq('is_featured', true)
           .limit(8);
 
@@ -213,7 +213,7 @@ export function useTrendingProducts() {
 
         const { data, error } = await supabase
           .from('products')
-          .select('*')
+          .select('*, profiles(phone, shop_name)')
           .eq('is_trending', true)
           .limit(8);
 
@@ -262,7 +262,7 @@ export function useRelatedProducts(category, excludeId) {
 
         let query = supabase
           .from('products')
-          .select('*')
+          .select('*, profiles(phone, shop_name)')
           .eq('category', category)
           .limit(4);
 

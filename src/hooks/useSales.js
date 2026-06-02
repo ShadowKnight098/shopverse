@@ -42,7 +42,7 @@ export function useSales() {
 /**
  * Creates a new upcoming sale entry.
  *
- * @param {Object} data - Sale data (title, description, start_date, end_date, discount_percentage, etc.).
+ * @param {Object} data - Sale data (title, description, start_date, end_date, discount, banner, etc.).
  * @returns {Promise<{ data: Object|null, error: string|null }>}
  */
 export async function createSale(data) {

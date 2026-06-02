@@ -19,9 +19,10 @@ const useCartStore = create(
        * Adds a product to the cart or increments its quantity if already present.
        * Enforces stock limits before adding.
        */
-      addItem: (product) => {
+      addItem: (product, selectedSize = null) => {
         const { items } = get()
-        const existing = items.find((item) => item.id === product.id)
+        const cartItemId = product.id + (selectedSize ? `-${selectedSize}` : '')
+        const existing = items.find((item) => (item.cartItemId || item.id) === cartItemId)
 
         if (existing) {
           if (existing.quantity >= (product.stock || 99)) {
@@ -30,7 +31,7 @@ const useCartStore = create(
           }
           set({
             items: items.map((item) =>
-              item.id === product.id
+              (item.cartItemId || item.id) === cartItemId
                 ? { ...item, quantity: item.quantity + 1 }
                 : item
             ),
@@ -41,27 +42,31 @@ const useCartStore = create(
             items: [
               ...items,
               {
+                cartItemId,
                 id: product.id,
                 name: product.name,
                 price: product.price,
                 original_price: product.original_price,
                 image_url: product.image_url,
+                category: product.category,
                 quantity: 1,
                 stock: product.stock || 99,
+                selectedSize: selectedSize || null,
+                dealerPhone: product.profiles?.phone || product.dealerPhone || null,
               },
             ],
           })
-          toast.success(`${product.name} added to cart!`)
+          toast.success(`${product.name} ${selectedSize ? `(Size: ${selectedSize}) ` : ''}added to cart!`)
         }
       },
 
       /**
        * Removes a product from the cart entirely.
        */
-      removeItem: (productId) => {
+      removeItem: (cartItemId) => {
         const { items } = get()
-        const item = items.find((i) => i.id === productId)
-        set({ items: items.filter((i) => i.id !== productId) })
+        const item = items.find((i) => (i.cartItemId || i.id) === cartItemId)
+        set({ items: items.filter((i) => (i.cartItemId || i.id) !== cartItemId) })
         if (item) {
           toast.success(`${item.name} removed from cart.`)
         }
@@ -71,9 +76,9 @@ const useCartStore = create(
        * Sets the quantity of a specific cart item.
        * Clamps between 1 and the item's stock limit.
        */
-      updateQuantity: (productId, quantity) => {
+      updateQuantity: (cartItemId, quantity) => {
         const { items } = get()
-        const item = items.find((i) => i.id === productId)
+        const item = items.find((i) => (i.cartItemId || i.id) === cartItemId)
 
         if (!item) return
 
@@ -85,7 +90,7 @@ const useCartStore = create(
 
         set({
           items: items.map((i) =>
-            i.id === productId ? { ...i, quantity: clampedQty } : i
+            (i.cartItemId || i.id) === cartItemId ? { ...i, quantity: clampedQty } : i
           ),
         })
       },

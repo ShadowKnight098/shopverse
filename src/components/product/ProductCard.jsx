@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Heart, ShoppingCart, MessageCircle } from 'lucide-react';
 import LazyImage from '../common/LazyImage';
 import StarRating from '../common/StarRating';
@@ -8,19 +8,31 @@ import { formatPrice, generateWhatsAppLink } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
 export default function ProductCard({ product, compact = false }) {
+  const navigate      = useNavigate();
   const addItem       = useCartStore((s) => s.addItem);
   const toggleItem    = useWishlistStore((s) => s.toggleItem);
   const isInWishlist  = useWishlistStore((s) => s.isInWishlist(product.id));
 
   const handleAddToCart = (e) => {
     e.preventDefault(); e.stopPropagation();
+    if (product.category === 'fashion' && product.sizes && product.sizes.length > 0) {
+      toast('Please select a size first.', { icon: '👕' });
+      navigate(`/products/${product.id}`);
+      return;
+    }
     addItem(product);
     toast.success('Added to cart!', { duration: 1500 });
   };
 
   const handleBuyNow = (e) => {
     e.preventDefault(); e.stopPropagation();
-    const link = generateWhatsAppLink([{ ...product, quantity: 1 }], product.price, {});
+    if (product.category === 'fashion' && product.sizes && product.sizes.length > 0) {
+      toast('Please select a size first.', { icon: '👕' });
+      navigate(`/products/${product.id}`);
+      return;
+    }
+    const dealerPhone = product.profiles?.phone || null;
+    const link = generateWhatsAppLink([{ ...product, quantity: 1 }], product.price, {}, dealerPhone);
     window.open(link, '_blank');
   };
 

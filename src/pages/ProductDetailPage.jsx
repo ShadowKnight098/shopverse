@@ -28,6 +28,7 @@ export default function ProductDetailPage() {
   const isInWishlist   = useWishlistStore((s) => s.isInWishlist)
 
   const [quantity, setQuantity]           = useState(1)
+  const [selectedSize, setSelectedSize]   = useState(null)
   const [activeTab, setActiveTab]         = useState('description')
   const [reviewRating, setReviewRating]   = useState(5)
   const [reviewComment, setReviewComment] = useState('')
@@ -37,14 +38,30 @@ export default function ProductDetailPage() {
     document.title = product ? `${product.name} — ShopVerse` : 'Product — ShopVerse'
   }, [product])
 
-  useEffect(() => { setQuantity(1) }, [id])
+  useEffect(() => {
+    setQuantity(1)
+    setSelectedSize(null)
+  }, [id])
 
   const handleBuyNow = () => {
     if (!product) return
+    if (product.sizes && product.sizes.length > 0 && !selectedSize) {
+      toast.error('Please select a size first!', { icon: '👕' })
+      return
+    }
+    const dealerPhone = product.profiles?.phone || null;
     const link = generateWhatsAppLink(
-      [{ id: product.id, name: product.name, price: product.price, image_url: product.image_url, quantity }],
+      [{
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image_url: product.image_url,
+        quantity,
+        selectedSize
+      }],
       product.price * quantity,
-      { name: profile?.name }
+      { name: profile?.name },
+      dealerPhone
     )
     window.open(link, '_blank')
   }
@@ -688,6 +705,41 @@ export default function ProductDetailPage() {
               {/* Description */}
               <p className="pdp-desc">{product.description}</p>
 
+              {/* Sizes selector */}
+              {product.sizes && product.sizes.length > 0 && (
+                <div className="pdp-sizes-section" style={{ marginBottom: 24 }}>
+                  <span className="pdp-qty-label" style={{ display: 'block', marginBottom: 8 }}>Select Size</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {product.sizes.map((size) => {
+                      const isSelected = selectedSize === size;
+                      return (
+                        <button
+                          key={size}
+                          type="button"
+                          onClick={() => setSelectedSize(isSelected ? null : size)}
+                          style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: 'var(--radius)',
+                            fontSize: 13,
+                            fontWeight: 700,
+                            border: '1.5px solid var(--border)',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            background: isSelected ? 'var(--accent)' : 'var(--surface)',
+                            color: isSelected ? '#fff' : 'var(--text)',
+                            borderColor: isSelected ? 'var(--accent)' : 'var(--border)',
+                            boxShadow: isSelected ? '0 2px 8px rgba(79,70,229,0.2)' : 'none',
+                          }}
+                        >
+                          {size}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Quantity */}
               {inStock && (
                 <div className="pdp-qty-row">
@@ -716,7 +768,13 @@ export default function ProductDetailPage() {
               <div className="pdp-actions">
                 <button
                   className="pdp-btn-cart"
-                  onClick={() => { addToCart({ ...product, quantity }); toast.success('Added to cart!', { duration: 1500 }) }}
+                  onClick={() => {
+                    if (product.sizes && product.sizes.length > 0 && !selectedSize) {
+                      toast.error('Please select a size first!', { icon: '👕' });
+                      return;
+                    }
+                    addToCart(product, selectedSize);
+                  }}
                   disabled={!inStock}
                 >
                   <ShoppingCart size={18} />
