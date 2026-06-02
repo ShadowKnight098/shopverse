@@ -53,7 +53,7 @@ export function truncateText(text, maxLength = 100) {
  * @param {Object} userInfo - Customer info { name, phone }
  * @returns {string} WhatsApp URL ready to open
  */
-export function generateWhatsAppLink(cartItems = [], totalAmount = 0, userInfo = {}) {
+export function generateWhatsAppLink(cartItems = [], totalAmount = 0, userInfo = {}, whatsappNumber = null) {
   const separator = '━━━━━━━━━━━━━━━━━━━━'
   const now = new Date()
   const dateStr = formatDate(now)
@@ -89,5 +89,6 @@ export function generateWhatsAppLink(cartItems = [], totalAmount = 0, userInfo =
   message += `We'll confirm your order shortly.`
 
   const encodedMessage = encodeURIComponent(message)
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`
+  const numberToUse = whatsappNumber ? whatsappNumber.replace(/\D/g, '') : WHATSAPP_NUMBER
+  return `https://wa.me/${numberToUse}?text=${encodedMessage}`
 }

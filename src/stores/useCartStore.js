@@ -103,6 +103,13 @@ const useCartStore = create(
         toast.success('Cart cleared.')
       },
 
+      /**
+       * Batch updates/sets the items in the cart.
+       */
+      setItems: (newItems) => {
+        set({ items: newItems })
+      },
+
       /** Returns the total number of items (sum of all quantities). */
       get totalItems() {
         return get().items.reduce((sum, item) => sum + item.quantity, 0)

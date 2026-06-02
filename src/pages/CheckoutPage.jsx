@@ -10,10 +10,11 @@ import { generateWhatsAppLink, formatPrice } from '../utils/formatters';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import LazyImage from '../components/common/LazyImage';
+import { supabase } from '../lib/supabase';
 
 export default function CheckoutPage() {
   const navigate  = useNavigate();
-  const { items, totalPrice, clearCart } = useCartStore();
+  const { items, clearCart, setItems } = useCartStore();
   const { user, profile }               = useAuthStore();
   const { addresses, loading: addressesLoading } = useAddresses(user?.id);
 
@@ -26,7 +27,8 @@ export default function CheckoutPage() {
     phone: '', address_line: '', city: '', state: '', pincode: '',
   });
 
-  const shippingCost = 0; // Free shipping
+  const totalPrice = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const shippingCost = totalPrice > 500 ? 0 : 49;
   const finalTotal   = totalPrice + shippingCost;
   const savings      = items.reduce((sum, i) => sum + ((i.original_price || i.price) - i.price) * i.quantity, 0);
 
@@ -65,6 +67,68 @@ export default function CheckoutPage() {
 
     setLoading(true);
     try {
+      // Fetch latest product details from database to compare
+      const productIds = items.map(item => item.id);
+      const { data: dbProducts, error: dbError } = await supabase
+        .from('products')
+        .select('*')
+        .in('id', productIds);
+
+      if (dbError) throw new Error(`Database verification failed: ${dbError.message}`);
+
+      let priceChanged = false;
+      let stockError = false;
+      let unavailableError = false;
+      const updatedItems = [];
+      const warnings = [];
+
+      for (const item of items) {
+        const dbProduct = dbProducts ? dbProducts.find(p => p.id === item.id) : null;
+        if (!dbProduct) {
+          toast.error(`Product "${item.name}" is no longer available.`);
+          unavailableError = true;
+          continue;
+        }
+
+        let updatedItem = { ...item };
+
+        // Check stock availability
+        if (item.quantity > dbProduct.stock) {
+          toast.error(`"${item.name}" only has ${dbProduct.stock} items left in stock.`);
+          updatedItem.stock = dbProduct.stock;
+          updatedItem.quantity = dbProduct.stock; // clamp to maximum available stock
+          stockError = true;
+        }
+
+        // Check price updates
+        if (dbProduct.price !== item.price) {
+          warnings.push(`Price of "${item.name}" changed from ${formatPrice(item.price)} to ${formatPrice(dbProduct.price)}.`);
+          updatedItem.price = dbProduct.price;
+          updatedItem.original_price = dbProduct.original_price;
+          priceChanged = true;
+        }
+
+        // Update other details to match DB
+        updatedItem.name = dbProduct.name;
+        updatedItem.image_url = dbProduct.image_url;
+
+        updatedItems.push(updatedItem);
+      }
+
+      // If there are unavailable products, filter them out and update cart
+      if (unavailableError || stockError || priceChanged) {
+        const finalItemsToKeep = updatedItems.filter(i => i.quantity > 0);
+        setItems(finalItemsToKeep);
+        
+        if (warnings.length > 0) {
+          warnings.forEach(warn => toast.error(warn, { duration: 5000 }));
+          toast.error('Prices or stock in your cart have changed. Please review the updated order total and submit again.', { duration: 6000 });
+        }
+        
+        setLoading(false);
+        return; // stop execution so user can review the new summary
+      }
+
       const { data, error } = await createOrder({
         userId: user.id, items, totalAmount: finalTotal, shippingAddress: shippingAddressData,
       });
