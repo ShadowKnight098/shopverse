@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../stores/useAuthStore';
 import useWishlistStore from '../stores/useWishlistStore';
 import { useOrders } from '../hooks/useOrders';
-import { useAddresses } from '../hooks/useAddresses';
+import { useAddresses, addAddress, deleteAddress } from '../hooks/useAddresses';
 import { formatDate, formatPrice } from '../utils/formatters';
 import Modal from '../components/common/Modal';
 
@@ -753,7 +753,7 @@ function OrdersTab({ userId }) {
 const ADDR_ICONS = { Home: 'ti-home', Office: 'ti-briefcase', Other: 'ti-map-pin' };
 
 function AddressesTab({ userId }) {
-  const { addresses, loading, addAddress, deleteAddress } = useAddresses(userId);
+  const { addresses, loading, refetch } = useAddresses(userId);
   const [isOpen, setIsOpen] = useState(false);
   const [newAddr, setNewAddr] = useState({
     label: 'Home', full_name: '', phone: '',
@@ -763,13 +763,29 @@ function AddressesTab({ userId }) {
   const handleAdd = async (e) => {
     e.preventDefault();
     const { error } = await addAddress({ ...newAddr, user_id: userId });
-    if (!error) { toast.success('Address added'); setIsOpen(false); }
+    if (!error) {
+      toast.success('Address added');
+      setIsOpen(false);
+      refetch();
+      // Reset form
+      setNewAddr({
+        label: 'Home', full_name: '', phone: '',
+        address_line: '', city: '', state: '', pincode: '', is_default: false,
+      });
+    } else {
+      toast.error(error);
+    }
   };
 
   const handleDelete = async (id) => {
     if (window.confirm('Delete this address?')) {
-      await deleteAddress(id);
-      toast.success('Address deleted');
+      const { error } = await deleteAddress(id);
+      if (!error) {
+        toast.success('Address deleted');
+        refetch();
+      } else {
+        toast.error(error);
+      }
     }
   };
 

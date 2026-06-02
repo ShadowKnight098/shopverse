@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import useAuthStore from '../stores/useAuthStore';
 import { supabase } from '../lib/supabase.js';
 import { CATEGORIES } from '../lib/constants.js';
-import ImageUpload from '../components/common/ImageUpload';
+import MultiImageUpload from '../components/common/MultiImageUpload';
 
 export default function DealerEditProductPage() {
   const { id } = useParams();
@@ -30,6 +30,7 @@ export default function DealerEditProductPage() {
         category:    data.category || '',
         stock:       data.stock?.toString() || '',
         image_url:   data.image_url || '',
+        images:      data.images || [],
         is_featured: data.is_featured || false,
         is_trending: data.is_trending || false,
         sizes:       data.sizes || [],
@@ -42,6 +43,7 @@ export default function DealerEditProductPage() {
 
   const set      = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
   const setImg   = (url) => setForm((f) => ({ ...f, image_url: url }));
+  const setImages = (urls) => setForm((f) => ({ ...f, images: urls }));
   const setCheck = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.checked }));
 
   const validate = () => {
@@ -64,6 +66,7 @@ export default function DealerEditProductPage() {
       category:    form.category,
       stock:       parseInt(form.stock) || 0,
       image_url:   form.image_url,
+      images:      form.images,
       is_featured: form.is_featured,
       is_trending: form.is_trending,
       sizes:       form.category === 'fashion' ? form.sizes : null,
@@ -108,9 +111,15 @@ export default function DealerEditProductPage() {
               <div className="dep-card-icon" style={{ background: 'rgba(99,102,241,0.12)', color: '#818cf8' }}>
                 <Package size={16} />
               </div>
-              <h2 className="dep-card-title">Product Image</h2>
+              <h2 className="dep-card-title">Product Gallery</h2>
             </div>
-            <ImageUpload value={form.image_url} onChange={setImg} label="" />
+            <MultiImageUpload
+              images={form.images}
+              coverImage={form.image_url}
+              onImagesChange={setImages}
+              onCoverImageChange={setImg}
+              label="Upload multiple product images. Star an image to make it the main cover image."
+            />
           </div>
 
           {/* ── Basic info ── */}

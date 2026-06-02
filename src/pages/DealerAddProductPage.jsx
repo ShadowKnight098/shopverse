@@ -5,12 +5,12 @@ import toast from 'react-hot-toast';
 import useAuthStore from '../stores/useAuthStore';
 import { supabase } from '../lib/supabase.js';
 import { CATEGORIES } from '../lib/constants.js';
-import ImageUpload from '../components/common/ImageUpload';
+import MultiImageUpload from '../components/common/MultiImageUpload';
 
 const EMPTY = {
   name: '', description: '', price: '', category: '',
   stock: '', image_url: '', is_featured: false, is_trending: false,
-  sizes: [],
+  sizes: [], images: [],
 };
 
 export default function DealerAddProductPage() {
@@ -28,6 +28,7 @@ export default function DealerAddProductPage() {
 
   const set      = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
   const setImg   = (url) => setForm((f) => ({ ...f, image_url: url }));
+  const setImages = (urls) => setForm((f) => ({ ...f, images: urls }));
   const setCheck = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.checked }));
 
   const validate = () => {
@@ -50,6 +51,7 @@ export default function DealerAddProductPage() {
       category:    form.category,
       stock:       parseInt(form.stock) || 0,
       image_url:   form.image_url,
+      images:      form.images,
       is_featured: form.is_featured,
       is_trending: form.is_trending,
       dealer_id:   user.id,
@@ -89,9 +91,15 @@ export default function DealerAddProductPage() {
               <div className="dap-card-icon" style={{ background: 'rgba(99,102,241,0.12)', color: '#818cf8' }}>
                 <Package size={16} />
               </div>
-              <h2 className="dap-card-title">Product Image</h2>
+              <h2 className="dap-card-title">Product Gallery</h2>
             </div>
-            <ImageUpload value={form.image_url} onChange={setImg} label="" />
+            <MultiImageUpload
+              images={form.images}
+              coverImage={form.image_url}
+              onImagesChange={setImages}
+              onCoverImageChange={setImg}
+              label="Upload multiple product images. Star an image to make it the main cover image."
+            />
           </div>
 
           {/* ── Basic info ── */}
