@@ -1,14 +1,15 @@
-  import { useState, useEffect, useRef } from 'react';
+  import { useState, useEffect, useRef, useCallback } from 'react';
   import { Link, NavLink, useNavigate } from 'react-router-dom';
   import {
     ShoppingCart, Heart, Sun, Moon, Menu, X,
-    Search, User, LogOut, LayoutDashboard, Shield, ChevronDown, Store,
+    Search, User, LogOut, LayoutDashboard, Shield, ChevronDown, Store, TrendingUp,
   } from 'lucide-react';
   import useCartStore from '../../stores/useCartStore';
   import useWishlistStore from '../../stores/useWishlistStore';
   import useThemeStore from '../../stores/useThemeStore';
   import useAuthStore from '../../stores/useAuthStore';
   import { NAV_LINKS } from '../../lib/constants.js';
+  import { supabase } from '../../lib/supabase.js';
 
   export default function Navbar() {
     const [mobileOpen, setMobileOpen]   = useState(false);
@@ -16,10 +17,15 @@
     const [searchQuery, setSearchQuery] = useState('');
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [scrolled, setScrolled]       = useState(false);
+    const [suggestions, setSuggestions] = useState([]);
+    const [sugLoading, setSugLoading]   = useState(false);
+    const [activeIndex, setActiveIndex] = useState(-1);
 
     const navigate    = useNavigate();
     const searchRef   = useRef(null);
     const userMenuRef = useRef(null);
+    const sugRef      = useRef(null);
+    const debounceRef = useRef(null);
 
     const cartItems   = useCartStore((s) => s.items);
     const setCartOpen = useCartStore((s) => s.setCartOpen);
@@ -54,16 +60,91 @@
       return () => { document.body.style.overflow = ''; };
     }, [mobileOpen]);
 
+    /* Debounced search suggestions from Supabase */
+    const fetchSuggestions = useCallback(async (query) => {
+      if (!query || query.trim().length < 2) {
+        setSuggestions([]);
+        setSugLoading(false);
+        return;
+      }
+      setSugLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('id, name, price, image_url, category')
+          .ilike('name', `%${query.trim()}%`)
+          .limit(6);
+        if (!error) setSuggestions(data || []);
+      } catch (_) {
+        setSuggestions([]);
+      } finally {
+        setSugLoading(false);
+      }
+    }, []);
+
+    /* Handle typing — debounce 300 ms */
+    const handleSearchChange = (e) => {
+      const val = e.target.value;
+      setSearchQuery(val);
+      setActiveIndex(-1);
+      clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => fetchSuggestions(val), 300);
+    };
+
+    const closeSuggestions = () => {
+      setSuggestions([]);
+      setActiveIndex(-1);
+    };
+
+    const goToProduct = (product) => {
+      navigate(`/products/${product.id}`);
+      setSearchQuery('');
+      setSearchOpen(false);
+      setMobileOpen(false);
+      closeSuggestions();
+    };
+
     const handleSearch = (e) => {
       e.preventDefault();
+      if (activeIndex >= 0 && suggestions[activeIndex]) {
+        goToProduct(suggestions[activeIndex]);
+        return;
+      }
       const q = searchQuery.trim();
       if (q) {
         navigate(`/products?search=${encodeURIComponent(q)}`);
         setSearchQuery('');
         setSearchOpen(false);
         setMobileOpen(false);
+        closeSuggestions();
       }
     };
+
+    /* Keyboard navigation for suggestions */
+    const handleKeyDown = (e) => {
+      if (!suggestions.length) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActiveIndex((i) => Math.min(i + 1, suggestions.length - 1));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActiveIndex((i) => Math.max(i - 1, -1));
+      } else if (e.key === 'Escape') {
+        closeSuggestions();
+        setSearchOpen(false);
+      }
+    };
+
+    /* Close suggestions on outside click */
+    useEffect(() => {
+      const handler = (e) => {
+        if (sugRef.current && !sugRef.current.contains(e.target)) {
+          closeSuggestions();
+        }
+      };
+      document.addEventListener('mousedown', handler);
+      return () => document.removeEventListener('mousedown', handler);
+    }, []);
 
     const handleLogout = () => {
       logout();
@@ -313,6 +394,10 @@
             from { transform: translateX(100%); }
             to   { transform: translateX(0); }
           }
+          @keyframes sugFadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
           .nav-icon-btn:hover { background: ${isDark ? 'rgba(51,65,85,0.7)' : 'rgba(243,244,246,1)'} !important; }
           .nav-avatar-btn:hover { background: ${isDark ? 'rgba(51,65,85,0.7)' : 'rgba(243,244,246,1)'} !important; }
           .nav-login-btn:hover { background: #4338ca !important; }
@@ -321,6 +406,8 @@
           .nav-search-input:focus { border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.15) !important; }
           .nav-mobile-btn:hover { background: ${isDark ? 'rgba(30,41,59,0.8)' : '#f9fafb'} !important; }
           .nav-close-btn:hover  { background: ${isDark ? 'rgba(30,41,59,0.8)' : '#f3f4f6'} !important; }
+          .sug-item:hover, .sug-item.active { background: ${isDark ? 'rgba(79,70,229,0.18)' : '#eef2ff'} !important; }
+          .sug-view-all:hover { background: ${isDark ? 'rgba(51,65,85,0.6)' : '#f9fafb'} !important; }
 
           /* Desktop nav only visible ≥1024px */
           .nav-desktop { display: none; }
@@ -524,41 +611,289 @@
           </div>
 
           {/* Search bar */}
-          {searchOpen && (
-            <div style={S.searchBar}>
-              <div className="nav-inner" style={{ ...S.inner, padding: '12px 16px' }}>
-                <form onSubmit={handleSearch} style={{ position: 'relative' }}>
-                  <Search
-                    size={17}
-                    style={{
-                      position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
-                      color: '#9ca3af', pointerEvents: 'none',
-                    }}
-                  />
-                  <input
-                    ref={searchRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search products, categories..."
-                    className="nav-search-input"
-                    style={S.searchInput}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
-                    style={{
-                      position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      color: '#9ca3af', display: 'flex', padding: 0,
-                    }}
-                  >
-                    <X size={17} />
-                  </button>
-                </form>
-              </div>
-            </div>
+       {searchOpen && (
+  <div style={S.searchBar}>
+    <div className="nav-inner" style={{ ...S.inner, padding: '12px 16px' }}>
+      <div ref={sugRef} style={{ position: 'relative' }}>
+        <form onSubmit={handleSearch} style={{ position: 'relative' }}>
+          <Search
+            size={17}
+            style={{
+              position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
+              color: '#6366f1', pointerEvents: 'none',
+            }}
+          />
+          <input
+            ref={searchRef}
+            type="text"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            onKeyDown={handleKeyDown}
+            placeholder="Search products, categories..."
+            className="nav-search-input"
+            style={S.searchInput}
+            autoComplete="off"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => { setSearchOpen(false); setSearchQuery(''); closeSuggestions(); }}
+              style={{
+                position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                background: isDark ? '#334155' : '#f3f4f6',
+                border: 'none', cursor: 'pointer',
+                color: isDark ? '#94a3b8' : '#6b7280',
+                display: 'flex', padding: '4px', borderRadius: 6,
+              }}
+            >
+              <X size={14} />
+            </button>
           )}
+        </form>
+
+        {/* Suggestions Dropdown */}
+        {(suggestions.length > 0 || sugLoading) && searchQuery.length >= 2 && (
+          <div style={{
+            position: 'absolute',
+            top: 'calc(100% + 8px)',
+            left: 0, right: 0,
+            background: isDark ? '#1e293b' : 'white',
+            borderRadius: 18,
+            boxShadow: '0 24px 64px rgba(0,0,0,0.18)',
+            border: `1px solid ${isDark ? '#334155' : '#e5e7eb'}`,
+            overflow: 'hidden',
+            zIndex: 999,
+            animation: 'sugFadeIn 0.15s ease',
+          }}>
+
+            {/* Category pills */}
+            {!sugLoading && suggestions.length > 0 && (
+              <div style={{
+                display: 'flex',
+                gap: 6,
+                padding: '10px 14px',
+                overflowX: 'auto',
+                scrollbarWidth: 'none',
+                borderBottom: `1px solid ${isDark ? '#1e293b' : '#f3f4f6'}`,
+              }}>
+                {['All', ...new Set(suggestions.map(p => p.category).filter(Boolean))].map((cat, i) => (
+                  <span key={cat} style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: '4px 10px',
+                    borderRadius: 20,
+                    whiteSpace: 'nowrap',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    background: i === 0 ? '#4f46e5' : (isDark ? '#0f172a' : '#f3f4f6'),
+                    color: i === 0 ? 'white' : (isDark ? '#94a3b8' : '#6b7280'),
+                    border: i === 0 ? 'none' : `1px solid ${isDark ? '#334155' : '#e5e7eb'}`,
+                  }}>
+                    {cat}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Results header */}
+            {!sugLoading && suggestions.length > 0 && (
+              <div style={{ padding: '6px 14px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: isDark ? '#475569' : '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Top results
+                </span>
+                <span style={{ fontSize: 10, color: isDark ? '#475569' : '#9ca3af' }}>
+                  {suggestions.length} found
+                </span>
+              </div>
+            )}
+
+            {/* Loading skeleton */}
+            {sugLoading && [1, 2].map(i => (
+              <div key={i} style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: `1px solid ${isDark ? '#1e293b' : '#f3f4f6'}` }}>
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: isDark ? '#334155' : '#f3f4f6', flexShrink: 0, animation: 'pulse 1.4s ease infinite' }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ width: '55%', height: 11, borderRadius: 6, background: isDark ? '#334155' : '#f3f4f6', marginBottom: 8, animation: 'pulse 1.4s ease infinite' }} />
+                  <div style={{ width: '30%', height: 8, borderRadius: 6, background: isDark ? '#334155' : '#f3f4f6', animation: 'pulse 1.4s ease 0.2s infinite' }} />
+                </div>
+                <div style={{ width: 52, height: 18, borderRadius: 6, background: isDark ? '#334155' : '#f3f4f6', animation: 'pulse 1.4s ease infinite' }} />
+              </div>
+            ))}
+
+            {/* Results */}
+            {!sugLoading && suggestions.map((product, idx) => {
+              const isActive = activeIndex === idx;
+              // Highlight matching text
+              const nameLC = product.name.toLowerCase();
+              const queryLC = searchQuery.toLowerCase().trim();
+              const matchIdx = nameLC.indexOf(queryLC);
+              let nameEl;
+              if (matchIdx >= 0 && queryLC.length > 0) {
+                nameEl = (
+                  <span>
+                    {product.name.slice(0, matchIdx)}
+                    <mark style={{ background: isDark ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.15)', color: isDark ? '#a5b4fc' : '#4338ca', borderRadius: 3, padding: '0 2px', fontWeight: 700 }}>
+                      {product.name.slice(matchIdx, matchIdx + queryLC.length)}
+                    </mark>
+                    {product.name.slice(matchIdx + queryLC.length)}
+                  </span>
+                );
+              } else {
+                nameEl = product.name;
+              }
+
+              return (
+                <button
+                  key={product.id}
+                  className={`sug-item${isActive ? ' active' : ''}`}
+                  onMouseDown={() => goToProduct(product)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '10px 14px',
+                    background: isActive
+                      ? (isDark ? 'rgba(79,70,229,0.15)' : 'rgba(79,70,229,0.06)')
+                      : 'transparent',
+                    borderLeft: isActive ? '2px solid #6366f1' : '2px solid transparent',
+                    borderBottom: idx < suggestions.length - 1
+                      ? `1px solid ${isDark ? '#1e293b' : '#f3f4f6'}`
+                      : 'none',
+                    borderTop: 'none',
+                    borderRight: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'background 0.12s, border-color 0.12s',
+                  }}
+                >
+                  {/* Product image */}
+                  <div style={{
+                    width: 48, height: 48,
+                    borderRadius: 12,
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                    background: isDark ? '#334155' : '#f3f4f6',
+                    border: `1px solid ${isDark ? '#475569' : '#e5e7eb'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {product.image_url ? (
+                      <img
+                        src={product.image_url}
+                        alt={product.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <TrendingUp size={19} style={{ color: isDark ? '#64748b' : '#9ca3af' }} />
+                    )}
+                  </div>
+
+                  {/* Product info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{
+                      margin: 0,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: isDark ? '#f1f5f9' : '#111827',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      lineHeight: 1.4,
+                    }}>
+                      {nameEl}
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
+                      {product.category && (
+                        <span style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: isDark ? '#64748b' : '#9ca3af',
+                          background: isDark ? '#0f172a' : '#f3f4f6',
+                          border: `1px solid ${isDark ? '#334155' : '#e5e7eb'}`,
+                          borderRadius: 4,
+                          padding: '1px 5px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                        }}>
+                          {product.category}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Price */}
+                  <span style={{
+                    fontSize: 13,
+                    fontWeight: 800,
+                    color: isDark ? '#818cf8' : '#4f46e5',
+                    flexShrink: 0,
+                    letterSpacing: '-0.02em',
+                  }}>
+                    ₹{Number(product.price).toLocaleString('en-IN')}
+                  </span>
+                </button>
+              );
+            })}
+
+            {/* No results */}
+            {!sugLoading && suggestions.length === 0 && searchQuery.length >= 2 && (
+              <div style={{ padding: '24px 16px', textAlign: 'center' }}>
+                <Search size={28} style={{ color: isDark ? '#334155' : '#e5e7eb', marginBottom: 8 }} />
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: isDark ? '#64748b' : '#9ca3af' }}>
+                  No products found
+                </p>
+                <p style={{ margin: '4px 0 0', fontSize: 12, color: isDark ? '#475569' : '#d1d5db' }}>
+                  Try a different keyword
+                </p>
+              </div>
+            )}
+
+            {/* View all footer */}
+            {!sugLoading && suggestions.length > 0 && (
+              <button
+                className="sug-view-all"
+                onMouseDown={() => {
+                  navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+                  setSearchOpen(false);
+                  setSearchQuery('');
+                  closeSuggestions();
+                }}
+                style={{
+                  width: '100%',
+                  padding: '11px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: isDark ? '#818cf8' : '#4f46e5',
+                  background: isDark ? '#0f172a' : '#fafafa',
+                  border: 'none',
+                  borderTop: `1px solid ${isDark ? '#1e293b' : '#e5e7eb'}`,
+                  cursor: 'pointer',
+                  letterSpacing: '0.03em',
+                  transition: 'background 0.15s',
+                }}
+              >
+                <Search size={12} />
+                View all results for &ldquo;{searchQuery}&rdquo;
+                <ChevronDown size={12} style={{ transform: 'rotate(-90deg)' }} />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+
+    <style>{`
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+    `}</style>
+  </div>
+)}
         </header>
 
         {/* ── Mobile Drawer ── */}
