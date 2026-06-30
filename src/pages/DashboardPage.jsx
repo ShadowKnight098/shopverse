@@ -7,6 +7,15 @@ import { useOrders } from '../hooks/useOrders';
 import { useAddresses, addAddress, deleteAddress } from '../hooks/useAddresses';
 import { formatDate, formatPrice } from '../utils/formatters';
 import Modal from '../components/common/Modal';
+import {
+  subscribeToInstallPrompt,
+  installPWA,
+  isPushSupported,
+  getNotificationPermission,
+  subscribeToPush,
+  unsubscribeFromPush,
+  triggerLocalTestNotification
+} from '../utils/pwaHelper';
 
 /* ─────────────────────────────────────────
    ROLE BADGE CONFIG
@@ -63,6 +72,7 @@ export default function DashboardPage() {
     { id: 'orders',    label: 'My Orders',       ti: 'ti-package' },
     { id: 'addresses', label: 'Saved Addresses', ti: 'ti-map-pin' },
     { id: 'wishlist',  label: 'Wishlist',        ti: 'ti-heart'   },
+    { id: 'settings',  label: 'App Settings',   ti: 'ti-settings' },
   ];
 
   const switchTab = (id) => {
@@ -561,6 +571,7 @@ export default function DashboardPage() {
             {activeTab === 'orders'    && <OrdersTab    key="orders"    userId={user?.id} />}
             {activeTab === 'addresses' && <AddressesTab key="addresses" userId={user?.id} />}
             {activeTab === 'wishlist'  && <WishlistTab  key="wishlist" />}
+            {activeTab === 'settings'  && <SettingsTab  key="settings"  userId={user?.id} />}
           </div>
 
         </div>
@@ -931,6 +942,276 @@ function WishlistTab() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
+   SETTINGS TAB (PWA & PUSH NOTIFICATIONS)
+───────────────────────────────────────── */
+function SettingsTab({ userId }) {
+  const [canInstall, setCanInstall] = useState(false);
+  const [permission, setPermission] = useState(getNotificationPermission());
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToInstallPrompt((promptAvailable) => {
+      setCanInstall(promptAvailable);
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const checkSub = async () => {
+      if (isPushSupported()) {
+        const registration = await navigator.serviceWorker.ready;
+        const sub = await registration.pushManager.getSubscription();
+        setIsSubscribed(!!sub);
+      }
+    };
+    checkSub();
+  }, []);
+
+  const handleInstall = async () => {
+    const success = await installPWA();
+    if (success) {
+      toast.success('ShopVerse App installation started!');
+    } else {
+      toast.error('App installation cancelled or failed.');
+    }
+  };
+
+  const handlePushToggle = async () => {
+    if (isToggling) return;
+    setIsToggling(true);
+    try {
+      if (isSubscribed) {
+        await unsubscribeFromPush(userId);
+        setIsSubscribed(false);
+        setPermission(getNotificationPermission());
+        toast.success('Unsubscribed from push notifications.');
+      } else {
+        await subscribeToPush(userId);
+        setIsSubscribed(true);
+        setPermission('granted');
+        toast.success('Subscribed to push notifications successfully!');
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to update push subscription.');
+      setPermission(getNotificationPermission());
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
+  const handleTestNotification = async () => {
+    toast.success('Triggered! Expect notification in 3 seconds.');
+    await triggerLocalTestNotification(
+      '🎉 ShopVerse Promotion!',
+      'Check out the latest discounts and featured products on your favorite store.',
+      3000
+    );
+  };
+
+  const pushSupported = isPushSupported();
+
+  return (
+    <div className="db-tab-panel">
+      <TabHeader icon="ti-settings" title="App Settings" sub="Manage application settings & offline alerts" />
+
+      <style>{`
+        .settings-card {
+          background: #f8fafc;
+          border: 0.5px solid rgba(0,0,0,0.08);
+          border-radius: 16px;
+          padding: 24px;
+          margin-bottom: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .dark .settings-card {
+          background: #0f172a;
+          border-color: rgba(255,255,255,0.07);
+        }
+        .settings-card:hover {
+          border-color: rgba(0,0,0,0.16);
+          box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+        }
+        .dark .settings-card:hover {
+          border-color: rgba(255,255,255,0.12);
+          box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+        }
+        .settings-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+        }
+        @media (max-width: 560px) {
+          .settings-row {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+          .settings-row button, .settings-row .switch-container {
+            align-self: flex-start;
+          }
+        }
+        .settings-title {
+          font-size: 16px;
+          font-weight: 700;
+          color: #111827;
+          margin: 0 0 6px 0;
+        }
+        .dark .settings-title {
+          color: #f1f5f9;
+        }
+        .settings-desc {
+          font-size: 13px;
+          color: #6b7280;
+          margin: 0;
+          line-height: 1.5;
+        }
+        .dark .settings-desc {
+          color: #94a3b8;
+        }
+        .settings-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 11px;
+          font-weight: 700;
+          padding: 4px 10px;
+          border-radius: 20px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        .badge-enabled {
+          background: rgba(5,150,105,0.1);
+          color: #059669;
+        }
+        .badge-disabled {
+          background: rgba(239,68,68,0.1);
+          color: #ef4444;
+        }
+        /* Custom Switch Toggle styling */
+        .switch-container {
+          position: relative;
+          display: inline-block;
+          width: 50px;
+          height: 26px;
+          flex-shrink: 0;
+        }
+        .switch-input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+        .switch-slider {
+          position: absolute;
+          cursor: pointer;
+          inset: 0;
+          background-color: #cbd5e1;
+          transition: .3s;
+          border-radius: 34px;
+        }
+        .dark .switch-slider {
+          background-color: #334155;
+        }
+        .switch-slider:before {
+          position: absolute;
+          content: "";
+          height: 18px;
+          width: 18px;
+          left: 4px;
+          bottom: 4px;
+          background-color: white;
+          transition: .3s;
+          border-radius: 50%;
+        }
+        .switch-input:checked + .switch-slider {
+          background-color: #6366f1;
+        }
+        .switch-input:checked + .switch-slider:before {
+          transform: translateX(24px);
+        }
+        .switch-input:disabled + .switch-slider {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+      `}</style>
+
+      {/* PWA App Installation Card */}
+      <div className="settings-card">
+        <div className="settings-row">
+          <div style={{ flex: 1 }}>
+            <h3 className="settings-title">Install App (PWA)</h3>
+            <p className="settings-desc">
+              Install ShopVerse directly on your mobile device or computer to get offline features, fast startup, and native system integration.
+            </p>
+          </div>
+          {canInstall ? (
+            <button className="db-add-btn" onClick={handleInstall} style={{ whiteSpace: 'nowrap' }}>
+              <i className="ti ti-download" aria-hidden="true" />
+              Install App
+            </button>
+          ) : (
+            <span className="settings-badge badge-enabled">
+              <i className="ti ti-check" aria-hidden="true" />
+              Ready/Installed
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Push Notifications Setup Card */}
+      <div className="settings-card">
+        <div className="settings-row">
+          <div style={{ flex: 1 }}>
+            <h3 className="settings-title">Push Notifications</h3>
+            <p className="settings-desc">
+              {!pushSupported 
+                ? 'Your browser does not support push notifications. Try using Chrome, Firefox, or Safari.' 
+                : 'Enable system notifications to receive alerts about discounts, orders status updates, and messaging notifications.'
+              }
+            </p>
+          </div>
+          {pushSupported && (
+            <label className="switch-container">
+              <input 
+                type="checkbox" 
+                className="switch-input"
+                checked={isSubscribed}
+                onChange={handlePushToggle}
+                disabled={isToggling}
+              />
+              <span className="switch-slider"></span>
+            </label>
+          )}
+        </div>
+
+        {pushSupported && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 10, borderTop: '0.5px solid rgba(0,0,0,0.06)' }}>
+            <span className={`settings-badge ${permission === 'granted' ? 'badge-enabled' : 'badge-disabled'}`}>
+              <i className={`ti ${permission === 'granted' ? 'ti-bell' : 'ti-bell-off'}`} aria-hidden="true" />
+              Status: {permission}
+            </span>
+
+            {permission === 'granted' && (
+              <button 
+                className="db-add-btn" 
+                onClick={handleTestNotification} 
+                style={{ padding: '6px 12px', fontSize: 12 }}
+              >
+                <i className="ti ti-send" aria-hidden="true" />
+                Test Push
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
